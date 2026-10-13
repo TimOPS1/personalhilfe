@@ -1,0 +1,4 @@
+supabase.js ist das unveränderte Browser-Bundle (dist/umd/supabase.js) des Pakets
+@supabase/supabase-js, Version 2.117.3, Lizenz MIT (siehe supabase-js.LICENSE).
+Es liegt bewusst im Repository, damit beim Öffnen der App kein fremder Server (CDN) kontaktiert wird.
+Aktualisieren: neue Version mit "npm pack @supabase/supabase-js" laden und die Datei ersetzen.

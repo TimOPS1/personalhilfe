@@ -8,7 +8,14 @@ window.PERSONALHILFE_CONFIG = {
   // SHA-256-Hash des Schulleitungs-Passworts (das Passwort selbst steht nicht im Code).
   // Neuen Hash erzeugen: im Browser die Konsole öffnen und eingeben:
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('NEUES-PASSWORT')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-  adminPasswordHash: "5ac905ba4a2336b952b8ee3c402351ab4303aadafb1b02e95c94db1a67fa4ef6",
+  adminPasswordHash: "2c013a7e49a8ced055e2ee3f1abd6c84fecaa1cb73b3f39d5477fcdef798a46a",
+
+  // Gemeinsamer Betrieb über Supabase. Solange url und anonKey leer sind, arbeitet die App
+  // nur lokal auf dem jeweiligen Handy. Beide Werte stehen in Supabase unter
+  // "Project Settings" -> "API". Der anon-Schlüssel ist für die Öffentlichkeit gedacht,
+  // geschützt wird über die Regeln aus supabase/schema.sql. Den "service_role"-Schlüssel
+  // darf man NIEMALS hier eintragen.
+  supabase: { url: "", anonKey: "" },
 
   // Beispieldaten beim Start anzeigen (zum Ausprobieren). Für den Echtbetrieb: false.
   demoData: false,

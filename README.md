@@ -22,17 +22,21 @@ Alles Wichtige steht in `config.js`:
 
 Auf GitHub: Datei öffnen, Stift-Symbol, ändern, "Commit changes". Nach ca. einer Minute ist die Änderung live.
 
-## Wichtig: aktueller Stand
+## Zwei Betriebsarten
 
-Die Seite hat **kein Backend**. Alle Eingaben bleiben im Browser des jeweiligen Handys und gelten nur für den heutigen Tag. Ein anderes Handy sieht sie nicht. Deshalb zeigt die App einen entsprechenden Hinweis, solange `localOnlyNotice: true` gesetzt ist.
+**Lokal (Standard):** Solange in `config.js` `supabase.url` und `supabase.anonKey` leer sind, bleiben alle Eingaben im Browser des jeweiligen Handys und gelten nur für den heutigen Tag. Der Passwortschutz der Schulleitung ist dann nur Bequemlichkeit, kein echter Schutz.
 
-Der Passwortschutz der Schulleitungs-Ansicht ist nur eine Bequemlichkeit, kein echter Schutz: Auf einer statischen Seite kann jeder technisch Versierte den Code ansehen und ändern. Es liegen hier aber auch keine geheimen Daten.
+**Gemeinsam (Supabase):** Alle Handys sehen denselben Stand in Echtzeit. Einrichtung:
 
-Für den echten gemeinsamen Betrieb fehlen:
+1. Auf supabase.com ein kostenloses Projekt anlegen, Region **Frankfurt (eu-central-1)**.
+2. Im SQL Editor den Inhalt von `supabase/schema.sql` ausführen.
+3. Im SQL Editor die Zugangsdaten setzen (nicht ins Repository schreiben):
+   `select public.ph_set_secrets('SCHULCODE', 'SCHULLEITUNGS-PASSWORT');` (jeweils mindestens 8 Zeichen)
+4. Unter Project Settings, API die Project URL und den `anon`-Key in `config.js` unter `supabase` eintragen. Den `service_role`-Key niemals.
+5. In `config.js` `adminPasswordHash` leeren und `localOnlyNotice: false` setzen.
+6. Beim ersten Öffnen fragt die App einmalig nach dem Schulcode und merkt ihn sich.
 
-- ein Backend mit Echtzeit-Abgleich (geplant: Supabase, EU-Region)
-- echte Anmeldung (ggf. über IServ-Single-Sign-On)
-- Web Push für Benachrichtigungen auf allen Handys
+Grenzen: Das kostenlose Supabase-Projekt pausiert nach einer Woche ohne Aktivität (Ferien), im Dashboard lässt es sich wieder starten. Web Push für Benachrichtigungen ist noch nicht eingebaut. Vor echtem Einsatz Datenschutz der Schule klären.
 
 ## Technik
 

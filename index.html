@@ -176,6 +176,9 @@
 
   .local-note{margin-top:12px;padding:8px 11px;background:var(--amber-soft);color:#8A5A14;border-radius:10px;font-size:12px;line-height:1.35;}
 
+  .code-input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card);color:var(--ink);}
+  .code-input + .help-btn{margin-top:12px;}
+
   .toast{
     position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:var(--teal-deep);color:#fff;padding:10px 18px;border-radius:12px;
@@ -190,6 +193,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="backend.js"></script>
 <script>
 // ---------- Konfiguration (siehe config.js) ----------
 const DAY_BLOCKS = ['1. Block','2. Block','Mittagessen','3. Block'];
@@ -203,6 +208,11 @@ const CFG = Object.assign({
 CFG.features = Object.assign({notifications:false}, USER_CFG.features || {});
 const STORAGE_KEY = 'personalhilfe.user';
 const STATE_KEY = 'personalhilfe.state';
+const CODE_KEY = 'personalhilfe.code';
+const TOKEN_KEY = 'personalhilfe.admintoken';
+// Gemeinsamer Betrieb nur, wenn backend.js mit gültiger Supabase-Konfiguration geladen wurde
+const BACKEND = window.PH_BACKEND || null;
+const REMOTE = !!BACKEND;
 
 // ---------- Zustand ----------
 function slug(str){ return String(str).toLowerCase().replace(/[^a-z0-9]+/g,'') || 'k'; }
@@ -228,10 +238,18 @@ let currentUser = null; // {type:'class', classId} | {type:'admin'} | null
 let myClassId = null;
 let pendingSendBlocks = {};
 let adminForm = {from:'', to:'', blocks:[]};
+let remoteCode = '';
+let adminToken = '';
+let remoteLoaded = false;
+let remoteFailed = false;
+let connectionOk = true;
+let remoteStarted = false;
+let renderDeferred = false;
 
 // ---------- Lokale Speicherung (pro Gerät, nur für den heutigen Tag) ----------
 function todayKey(){ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 function saveState(){
+  if(REMOTE) return;
   try{
     localStorage.setItem(STATE_KEY, JSON.stringify({
       day: todayKey(),
@@ -252,16 +270,25 @@ function loadState(){
     });
     flows = (st.flows||[]).filter(f=>classes.some(c=>c.id===f.from) && classes.some(c=>c.id===f.to));
     flowIdSeq = st.flowIdSeq || flows.length;
-    currentBlockIndex = Math.min(st.currentBlockIndex||0, DAY_BLOCKS.length-1);
+    currentBlockIndex = Math.max(0, Math.min(st.currentBlockIndex||0, DAY_BLOCKS.length));
   }catch(e){}
 }
 
 function classNameOf(id){ const c = classes.find(x=>x.id===id); return c? c.name : id; }
 
+function isFutureBlock(b){ return DAY_BLOCKS.indexOf(b) >= currentBlockIndex; }
 function requiredBlocks(c){
   if(c.need <= 0) return [];
   const chosen = c.needBlocks || [];
-  return chosen.length>0 ? DAY_BLOCKS.filter(b=>chosen.includes(b)) : DAY_BLOCKS.slice();
+  const all = chosen.length>0 ? DAY_BLOCKS.filter(b=>chosen.includes(b)) : DAY_BLOCKS.slice();
+  return all.filter(isFutureBlock);
+}
+function blockName(){ return currentBlockIndex < DAY_BLOCKS.length ? DAY_BLOCKS[currentBlockIndex] : 'Schultag beendet'; }
+// Einsätze, ohne bereits vergangene Zeiträume
+function liveFlows(){
+  return flows.filter(f=>f.active)
+    .map(f=>Object.assign({}, f, {blocks: f.blocks.filter(isFutureBlock)}))
+    .filter(f=>f.blocks.length>0);
 }
 function blockLabel(arr){
   if(!arr || arr.length===0) return 'Ganzer Tag';
@@ -316,6 +343,7 @@ async function sha256(text){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 async function loginAsAdmin(){
+  if(REMOTE) return remoteAdminLogin();
   if(!CFG.adminPasswordHash){ toast('Der Schulleitungs-Zugang ist nicht eingerichtet.'); return; }
   const pw = prompt('Passwort für Schulleitung:');
   if(pw === null) return;
@@ -328,12 +356,12 @@ async function loginAsAdmin(){
   render();
 }
 async function switchUser(){
-  currentUser = null; myClassId = null;
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  currentUser = null; myClassId = null; adminToken = '';
+  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(TOKEN_KEY); }catch(e){}
   render();
 }
 async function initApp(){
-  loadState();
+  if(!REMOTE) loadState();
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -344,6 +372,13 @@ async function initApp(){
       }
     }
   }catch(e){ /* noch keine Auswahl gespeichert */ }
+  if(REMOTE){
+    try{ remoteCode = localStorage.getItem(CODE_KEY) || ''; adminToken = localStorage.getItem(TOKEN_KEY) || ''; }catch(e){}
+    if(currentUser && currentUser.type==='admin' && !adminToken) currentUser = null;
+    render();
+    if(remoteCode) await startRemote();
+    return;
+  }
   render();
 }
 
@@ -355,10 +390,11 @@ function toggleSendBlock(classId, block){
   render();
 }
 function sendHelp(fromId, toId){
+  if(REMOTE) return remoteSend(fromId, toId);
   const from = classes.find(c=>c.id===fromId);
   const to = classes.find(c=>c.id===toId);
   const open = openBlocksFor(to);
-  const already = new Set(flows.filter(f=>f.active && f.from===fromId && f.to===toId).flatMap(f=>f.blocks));
+  const already = new Set(liveFlows().filter(f=>f.from===fromId && f.to===toId).flatMap(f=>f.blocks));
   const chosen = (pendingSendBlocks[toId]||[]).filter(b=>open.includes(b) && !already.has(b));
   if(chosen.length===0){ toast('Bitte mindestens einen Zeitraum auswählen.'); render(); return; }
   flows.push({id:flowIdSeq++, from:fromId, to:toId, time:now(), active:true, blocks:chosen});
@@ -376,6 +412,7 @@ function toggleNeedBlock(classId, block){
     if(i>=0) c.needBlocks.splice(i,1); else c.needBlocks.push(block);
   }
   render();
+  if(REMOTE && c.need>0) pushNeed(c);
 }
 function requestNeed(classId, qty){
   const c = classes.find(x=>x.id===classId);
@@ -384,33 +421,40 @@ function requestNeed(classId, qty){
   if(c.need <= 0) c.needBlocks = [];
   if(qty>0){
     toast(`Bedarf gemeldet: +${qty} Erwachsene(r) für ${c.name}`);
-    if(wasZero) maybeNotify('Personalbedarf', `${c.name} braucht Unterstützung (${blockLabel(c.needBlocks)})`);
+    if(wasZero && !REMOTE) maybeNotify('Personalbedarf', `${c.name} braucht Unterstützung (${blockLabel(c.needBlocks)})`);
   } else {
     toast('Rückgängig gemacht');
   }
   render();
+  if(REMOTE) pushNeed(c);
 }
 function endFlow(id){
+  if(REMOTE) return remoteEnd(id);
   const f = flows.find(x=>x.id===id);
   if(!f) return;
   f.active = false;
   toast('Unterstützung beendet');
   render();
 }
-function advanceBlock(){
-  const endingBlock = DAY_BLOCKS[currentBlockIndex];
-  flows.filter(f=>f.active).forEach(f=>{
-    f.blocks = f.blocks.filter(b=>b!==endingBlock);
-    if(f.blocks.length===0) f.active = false;
-  });
-  if(currentBlockIndex < DAY_BLOCKS.length-1){
-    currentBlockIndex++;
-    toast(`${endingBlock} beendet — jetzt: ${DAY_BLOCKS[currentBlockIndex]}`);
+// Zeitraum weiter- oder zurückschalten (nur Schulleitung). Einsätze werden dabei nicht gelöscht,
+// vergangene Zeiträume zählen einfach nicht mehr. So lässt sich ein Fehlklick rückgängig machen.
+async function stepBlock(delta){
+  const next = Math.max(0, Math.min(DAY_BLOCKS.length, currentBlockIndex + delta));
+  if(next === currentBlockIndex) return;
+  if(REMOTE){
+    const res = await remoteCall('ph_admin_set_block', {p_token:adminToken, p_index:next});
+    if(res.ok) await refreshRemote();
+    return;
+  }
+  currentBlockIndex = next;
+  if(delta > 0){
+    toast(next < DAY_BLOCKS.length ? `${DAY_BLOCKS[next-1]} beendet — jetzt: ${DAY_BLOCKS[next]}` : `${DAY_BLOCKS[next-1]} beendet — Schultag zu Ende`);
   } else {
-    toast(`${endingBlock} beendet — Schultag zu Ende`);
+    toast(`Zurück bei: ${blockName()}`);
   }
   render();
 }
+function advanceBlock(){ return stepBlock(1); }
 
 // ---------- Schulleitung ----------
 function setAdminField(field, value){ adminForm[field] = value; render(); }
@@ -423,28 +467,222 @@ function adminAssign(){
   if(!adminForm.from || !adminForm.to || adminForm.from===adminForm.to || adminForm.blocks.length===0){
     toast('Bitte Von-Klasse, Zu-Klasse und mindestens einen Zeitraum wählen.'); return;
   }
+  if(REMOTE) return remoteAssign();
   flows.push({id:flowIdSeq++, from:adminForm.from, to:adminForm.to, time:now(), active:true, blocks:adminForm.blocks.slice()});
   toast(`${classNameOf(adminForm.from)} → ${classNameOf(adminForm.to)} zugewiesen`);
   adminForm.blocks = [];
   render();
 }
 function adminClearNeed(classId){
+  if(REMOTE) return remoteClear(classId);
   const c = classes.find(x=>x.id===classId);
   c.need = 0; c.needBlocks = [];
   toast(`Bedarf von ${c.name} geschlossen`);
   render();
 }
 
+// ---------- Gemeinsamer Betrieb mit Supabase (nur aktiv, wenn in config.js eingerichtet) ----------
+const ERR_TEXT = {
+  netz: 'Keine Verbindung. Bitte gleich nochmal versuchen.',
+  code: 'Der Schulcode stimmt nicht (mehr). Bitte neu eingeben.',
+  token: 'Bitte als Schulleitung neu anmelden.',
+  gesperrt: 'Zu viele Fehlversuche. Bitte in 10 Minuten erneut versuchen.',
+  passwort: 'Falsches Passwort',
+  schon_gedeckt: 'Schon gedeckt, jemand war schneller.',
+  vergangen: 'Dieser Zeitraum ist schon vorbei.',
+  kein_bedarf: 'Diese Klasse meldet gerade keinen Bedarf.',
+  nicht_gefunden: 'Nicht mehr vorhanden.',
+  ungueltig: 'Eingabe ungültig.'
+};
+let pendingPushes = 0;
+let pushChain = Promise.resolve();
+let sendingNow = false;
+
+function berlinTime(iso){
+  try{ return new Date(iso).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}); }
+  catch(e){ return ''; }
+}
+function handleRemoteFail(res){
+  const e = res && res.error;
+  toast(ERR_TEXT[e] || ERR_TEXT.netz);
+  if(e === 'code'){
+    remoteCode = ''; remoteLoaded = false;
+    try{ localStorage.removeItem(CODE_KEY); }catch(x){}
+    render();
+  } else if(e === 'token'){
+    adminToken = '';
+    try{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(STORAGE_KEY); }catch(x){}
+    if(currentUser && currentUser.type === 'admin') currentUser = null;
+    render();
+  }
+}
+async function remoteCall(name, args){
+  const res = await BACKEND.rpc(name, args);
+  if(!res || !res.ok) handleRemoteFail(res);
+  return res || {ok:false, error:'netz'};
+}
+function applyRemote(d){
+  classes.forEach(c=>{
+    if(c.id === myClassId && pendingPushes > 0) return; // eigene, noch nicht gespeicherte Änderung nicht überschreiben
+    const row = (d.needs||[]).find(r=>r.class_id === c.id);
+    c.need = row ? row.need : 0;
+    if(c.need > 0) c.needBlocks = (row.blocks||[]).slice();
+    else if(c.id !== myClassId) c.needBlocks = [];
+  });
+  const known = id => classes.some(c=>c.id === id);
+  flows = (d.flows||[]).filter(f=>known(f.from_class) && known(f.to_class))
+    .map(f=>({id:f.id, from:f.from_class, to:f.to_class, blocks:(f.blocks||[]).slice(), active:!!f.active, time:berlinTime(f.created_at)}));
+  const dayRow = (d.day||[])[0];
+  currentBlockIndex = dayRow ? Math.max(0, Math.min(dayRow.block_index, DAY_BLOCKS.length)) : 0;
+}
+// Während ein Auswahlfeld offen ist, nicht neu zeichnen (sonst klappt es zu)
+function safeRender(){
+  const a = document.activeElement;
+  if(a && a.tagName === 'SELECT'){ renderDeferred = true; return; }
+  render();
+}
+async function refreshRemote(){
+  try{
+    applyRemote(await BACKEND.fetchDay());
+    remoteLoaded = true; remoteFailed = false; connectionOk = true;
+  }catch(e){
+    connectionOk = false;
+    if(!remoteLoaded) remoteFailed = true;
+  }
+  safeRender();
+}
+async function startRemote(){
+  if(remoteStarted){ await refreshRemote(); return; }
+  remoteStarted = true;
+  BACKEND.subscribe(()=>{
+    clearTimeout(window.__rtTimer);
+    window.__rtTimer = setTimeout(refreshRemote, 150);
+  });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshRemote(); });
+  document.addEventListener('focusout', ()=>{
+    if(renderDeferred){ renderDeferred = false; setTimeout(render, 0); }
+  });
+  window.addEventListener('online', refreshRemote);
+  setInterval(refreshRemote, 60000);
+  await refreshRemote();
+}
+async function submitCode(){
+  const el = document.getElementById('codeInput');
+  const code = ((el && el.value) || '').trim();
+  if(!code){ toast('Bitte den Schulcode eingeben.'); return; }
+  const res = await BACKEND.rpc('ph_login_code', {p_code:code});
+  if(!res.ok){ toast(ERR_TEXT[res.error] || ERR_TEXT.netz); return; }
+  remoteCode = code;
+  try{ localStorage.setItem(CODE_KEY, code); }catch(e){}
+  render();
+  await startRemote();
+}
+async function remoteAdminLogin(){
+  const pw = prompt('Passwort für Schulleitung:');
+  if(pw === null) return;
+  const res = await remoteCall('ph_admin_login', {p_code:remoteCode, p_password:pw.trim()});
+  if(!res.ok) return;
+  adminToken = res.token;
+  currentUser = {type:'admin'};
+  try{ localStorage.setItem(TOKEN_KEY, adminToken); localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser)); }catch(e){}
+  render();
+}
+// Bedarf speichern. Mehrere schnelle Klicks werden nacheinander gesendet, es gilt der letzte Stand.
+function pushNeed(c){
+  pendingPushes++;
+  pushChain = pushChain.then(async ()=>{
+    try{
+      await remoteCall('ph_set_need', {p_code:remoteCode, p_class:c.id, p_need:c.need, p_blocks:c.needBlocks.slice()});
+    }catch(e){
+    }finally{
+      pendingPushes--;
+    }
+    if(pendingPushes === 0) await refreshRemote(); // gleicht auch einen Fehlschlag mit dem Stand der Datenbank ab
+  });
+  return pushChain;
+}
+async function remoteSend(fromId, toId){
+  if(sendingNow) return;
+  const from = classes.find(c=>c.id === fromId);
+  const to = classes.find(c=>c.id === toId);
+  const open = openBlocksFor(to);
+  const chosen = (pendingSendBlocks[toId]||[]).filter(b=>open.includes(b));
+  if(chosen.length === 0){ toast('Bitte mindestens einen Zeitraum auswählen.'); render(); return; }
+  sendingNow = true;
+  try{
+    const res = await remoteCall('ph_send', {p_code:remoteCode, p_from:fromId, p_to:toId, p_blocks:chosen});
+    pendingSendBlocks[toId] = [];
+    if(res.ok){
+      const lost = chosen.filter(b=>!res.blocks.includes(b));
+      toast(lost.length
+        ? `Übernommen: ${res.blocks.join(', ')} (${lost.join(', ')} war schon vergeben)`
+        : `${from.name} → ${to.name} · ${res.blocks.join(', ')}`);
+    }
+  } finally {
+    sendingNow = false;
+  }
+  await refreshRemote();
+}
+async function remoteEnd(id){
+  const res = await remoteCall('ph_end_flow', {p_code:remoteCode, p_id:id});
+  if(res.ok) toast('Unterstützung beendet');
+  await refreshRemote();
+}
+async function remoteAssign(){
+  const form = {from:adminForm.from, to:adminForm.to, blocks:adminForm.blocks.slice()};
+  const res = await remoteCall('ph_admin_assign', {p_token:adminToken, p_from:form.from, p_to:form.to, p_blocks:form.blocks});
+  if(res.ok){
+    toast(`${classNameOf(form.from)} → ${classNameOf(form.to)} zugewiesen`);
+    adminForm.blocks = [];
+  }
+  await refreshRemote();
+}
+async function remoteClear(classId){
+  const res = await remoteCall('ph_admin_clear_need', {p_token:adminToken, p_class:classId});
+  if(res.ok) toast(`Bedarf von ${classNameOf(classId)} geschlossen`);
+  await refreshRemote();
+}
+function renderCodeGate(app){
+  app.innerHTML = `
+    <header class="top">
+      <div class="eyebrow">Personalhilfe</div>
+      <h1>Schulcode</h1>
+    </header>
+    <div class="card">
+      <h2>Bitte einmalig eingeben</h2>
+      <input id="codeInput" class="code-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schulcode" onkeydown="if(event.key==='Enter')submitCode()">
+      <button class="help-btn" onclick="submitCode()">Weiter</button>
+      <div class="login-hint">Den Code gibt es von der Schulleitung. Er wird auf diesem Handy gemerkt.</div>
+    </div>
+  `;
+}
+function renderLoading(app){
+  app.innerHTML = `
+    <header class="top">
+      <div class="eyebrow">Personalhilfe</div>
+      <h1>${remoteFailed ? 'Keine Verbindung' : 'Verbinde …'}</h1>
+    </header>
+    ${remoteFailed ? `<div class="card"><div class="empty">Die Daten konnten nicht geladen werden. Bitte die Verbindung prüfen.</div><button class="help-btn" onclick="refreshRemote()">Erneut versuchen</button></div>` : ''}
+  `;
+}
+
 // ---------- Rendering ----------
 function render(){
   saveState();
   const app = document.getElementById('app');
+  if(REMOTE){
+    if(!remoteCode){ renderCodeGate(app); return; }
+    if(!remoteLoaded){ renderLoading(app); return; }
+  }
   if(!currentUser){ renderLogin(app); return; }
   if(currentUser.type==='admin'){ renderAdmin(app); return; }
   renderClassApp(app);
 }
 
 function localNotice(){
+  if(REMOTE){
+    return connectionOk ? '' : '<div class="local-note">Keine Verbindung. Die Anzeige kann veraltet sein und Änderungen werden gerade nicht gespeichert.</div>';
+  }
   return CFG.localOnlyNotice
     ? '<div class="local-note">Hinweis: Eingaben bleiben auf diesem Gerät. Andere Handys sehen sie noch nicht.</div>'
     : '';
@@ -479,7 +717,7 @@ function renderClassApp(app){
   const mine = classes.find(c=>c.id===myClassId);
   const others = classes.filter(c=>c.id!==myClassId);
   const openNeeds = others.filter(c=>needStatus(c)==='open');
-  const activeFlows = flows.filter(f=>f.active);
+  const activeFlows = liveFlows();
   const needClasses = classes.filter(c=>needStatus(c)==='open');
   const balancedClasses = classes.filter(c=>needStatus(c)!=='open');
   const notifyReady = typeof Notification !== 'undefined' && Notification.permission === 'granted';
@@ -493,7 +731,7 @@ function renderClassApp(app){
         <button class="switch-btn" onclick="switchUser()">Neu wählen</button>
       </div>
       <div class="block-progress">
-        <span class="current-block">Aktuell: ${DAY_BLOCKS[currentBlockIndex]}</span>
+        <span class="current-block">Aktuell: ${blockName()}</span>
       </div>
       ${(!CFG.features.notifications || notifyReady)? '' : `<button class="notify-btn" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>`}
       ${localNotice()}
@@ -513,7 +751,7 @@ function renderClassApp(app){
             cls='ov-need';
             const open = openBlocksFor(c);
             const req = requiredBlocks(c);
-            label = open.length===req.length ? `braucht: ${blockLabel(c.needBlocks)}` : `offen: ${open.join(', ')}`;
+            label = open.length===req.length ? `braucht: ${blockLabel(req)}` : `offen: ${open.join(', ')}`;
           }
           return `<div class="ov-cell ${cls} ${isMine?'ov-mine':''}">
             <div class="ov-name">${c.name}${isMine?' · du':''}</div>
@@ -552,7 +790,7 @@ function renderClassApp(app){
             <div class="need-row">
               <div>
                 <div class="need-title">${c.name} braucht Unterstützung</div>
-                <div class="need-sub">${partial? `Noch offen: ${open.join(', ')}` : `Zeitraum: ${blockLabel(c.needBlocks)}`}</div>
+                <div class="need-sub">${partial? `Noch offen: ${open.join(', ')}` : `Zeitraum: ${blockLabel(req)}`}</div>
               </div>
             </div>
             <span class="status-pill">offen</span>
@@ -593,7 +831,7 @@ function renderClassApp(app){
 }
 
 function renderAdmin(app){
-  const activeFlows = flows.filter(f=>f.active);
+  const activeFlows = liveFlows();
   const openNeedClasses = classes.filter(c=>needStatus(c)==='open');
   const needClasses = openNeedClasses;
   const balancedClasses = classes.filter(c=>needStatus(c)!=='open');
@@ -607,8 +845,8 @@ function renderAdmin(app){
         <button class="switch-btn" onclick="switchUser()">Neu wählen</button>
       </div>
       <div class="block-progress">
-        <span class="current-block">Aktuell: ${DAY_BLOCKS[currentBlockIndex]}</span>
-        <button class="advance-btn" onclick="advanceBlock()">${currentBlockIndex<DAY_BLOCKS.length-1? DAY_BLOCKS[currentBlockIndex]+' beenden ›' : 'Schultag beenden'}</button>
+        <span class="current-block">Aktuell: ${blockName()}</span>
+        <span>${currentBlockIndex>0? '<button class="advance-btn" onclick="stepBlock(-1)">‹ zurück</button> ' : ''}${currentBlockIndex<DAY_BLOCKS.length? `<button class="advance-btn" onclick="stepBlock(1)">${DAY_BLOCKS[currentBlockIndex]} beenden ›</button>` : ''}</span>
       </div>
       <div class="block-progress-caption">Zusagen für nur diesen Zeitraum laufen dann automatisch ab</div>
       ${localNotice()}
@@ -627,7 +865,7 @@ function renderAdmin(app){
             cls='ov-need';
             const open = openBlocksFor(c);
             const req = requiredBlocks(c);
-            label = open.length===req.length ? `braucht: ${blockLabel(c.needBlocks)}` : `offen: ${open.join(', ')}`;
+            label = open.length===req.length ? `braucht: ${blockLabel(req)}` : `offen: ${open.join(', ')}`;
           }
           return `<div class="ov-cell ${cls}" style="cursor:default;">
             <div class="ov-name">${c.name}</div>
