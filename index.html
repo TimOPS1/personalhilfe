@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Personalhilfe</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2F6F63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Personalhilfe">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root{
     --bg:#F6F7F3;
@@ -166,6 +174,8 @@
   .login-row:active{background:var(--bg);}
   .login-hint{font-size:12px;color:var(--ink-soft);margin-top:10px;}
 
+  .local-note{margin-top:12px;padding:8px 11px;background:var(--amber-soft);color:#8A5A14;border-radius:10px;font-size:12px;line-height:1.35;}
+
   .toast{
     position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:var(--teal-deep);color:#fff;padding:10px 18px;border-radius:12px;
@@ -179,33 +189,72 @@
 <div class="app" id="app"></div>
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script>
-// ---------- Zustand (In-Memory-Prototyp) ----------
+// ---------- Konfiguration (siehe config.js) ----------
 const DAY_BLOCKS = ['1. Block','2. Block','Mittagessen','3. Block'];
-const ADMIN_PASSWORD = 'admin123'; // Demo-Passwort, in echt natürlich richtige Auth
-const STORAGE_KEY = 'currentUser';
+const USER_CFG = window.PERSONALHILFE_CONFIG || {};
+const CFG = Object.assign({
+  classes: ['Klasse A','Klasse B','Klasse C'],
+  adminPasswordHash: '',
+  demoData: false,
+  localOnlyNotice: true
+}, USER_CFG);
+CFG.features = Object.assign({notifications:false}, USER_CFG.features || {});
+const STORAGE_KEY = 'personalhilfe.user';
+const STATE_KEY = 'personalhilfe.state';
 
-let classes = [
-  {id:'A', name:'Klasse A', need:1, needBlocks:DAY_BLOCKS.slice()},
-  {id:'B', name:'Klasse B', need:0, needBlocks:[]},
-  {id:'C', name:'Klasse C', need:0, needBlocks:[]},
-  {id:'D', name:'Klasse D', need:2, needBlocks:DAY_BLOCKS.slice()},
-  {id:'E', name:'Klasse E', need:0, needBlocks:[]},
-  {id:'F', name:'Klasse F', need:0, needBlocks:[]},
-  {id:'G', name:'Klasse G', need:1, needBlocks:['Mittagessen']},
-  {id:'H', name:'Klasse H', need:0, needBlocks:[]},
-  {id:'I', name:'Klasse I', need:1, needBlocks:['1. Block']},
-  {id:'J', name:'Klasse J', need:0, needBlocks:[]},
-  {id:'K', name:'Klasse K', need:0, needBlocks:[]},
-  {id:'L', name:'Klasse L', need:0, needBlocks:[]},
-];
-let flows = [{id:0, from:'J', to:'A', time:'08:55', active:true, blocks:['1. Block','2. Block']}];
-let flowIdSeq = 1;
+// ---------- Zustand ----------
+function slug(str){ return String(str).toLowerCase().replace(/[^a-z0-9]+/g,'') || 'k'; }
+let classes = (()=>{
+  const seen = {};
+  return CFG.classes.map((name,i)=>{
+    let id = slug(name);
+    if(seen[id]) id = id + '_' + i;
+    seen[id] = 1;
+    return {id, name:String(name), need:0, needBlocks:[]};
+  });
+})();
+let flows = [];
+if(CFG.demoData && classes.length >= 4){
+  classes[0].need = 1; classes[0].needBlocks = DAY_BLOCKS.slice();
+  classes[2].need = 2; classes[2].needBlocks = DAY_BLOCKS.slice();
+  classes[3].need = 1; classes[3].needBlocks = ['Mittagessen'];
+  flows = [{id:0, from:classes[1].id, to:classes[0].id, time:'08:55', active:true, blocks:['1. Block','2. Block']}];
+}
+let flowIdSeq = flows.length;
 let currentBlockIndex = 0;
 let currentUser = null; // {type:'class', classId} | {type:'admin'} | null
 let myClassId = null;
 let pendingSendBlocks = {};
 let adminForm = {from:'', to:'', blocks:[]};
+
+// ---------- Lokale Speicherung (pro Gerät, nur für den heutigen Tag) ----------
+function todayKey(){ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function saveState(){
+  try{
+    localStorage.setItem(STATE_KEY, JSON.stringify({
+      day: todayKey(),
+      classes: classes.map(c=>({id:c.id, need:c.need, needBlocks:c.needBlocks})),
+      flows, flowIdSeq, currentBlockIndex
+    }));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STATE_KEY);
+    if(!raw) return;
+    const st = JSON.parse(raw);
+    if(st.day !== todayKey()) return; // neuer Tag: frisch starten
+    classes.forEach(c=>{
+      const o = (st.classes||[]).find(x=>x.id===c.id);
+      if(o){ c.need = o.need; c.needBlocks = o.needBlocks || []; }
+    });
+    flows = (st.flows||[]).filter(f=>classes.some(c=>c.id===f.from) && classes.some(c=>c.id===f.to));
+    flowIdSeq = st.flowIdSeq || flows.length;
+    currentBlockIndex = Math.min(st.currentBlockIndex||0, DAY_BLOCKS.length-1);
+  }catch(e){}
+}
 
 function classNameOf(id){ const c = classes.find(x=>x.id===id); return c? c.name : id; }
 
@@ -241,6 +290,7 @@ function toast(msg){
   window.__toastT = setTimeout(()=>t.classList.remove('show'), 2400);
 }
 function maybeNotify(title, body){
+  if(!CFG.features.notifications) return;
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
     try{ new Notification(title, {body}); } catch(e){}
   }
@@ -261,10 +311,18 @@ async function selectClass(id){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser)); }catch(e){}
   render();
 }
+async function sha256(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 async function loginAsAdmin(){
-  const pw = prompt('Passwort für Schulleitung (Demo: admin123):');
+  if(!CFG.adminPasswordHash){ toast('Der Schulleitungs-Zugang ist nicht eingerichtet.'); return; }
+  const pw = prompt('Passwort für Schulleitung:');
   if(pw === null) return;
-  if(pw !== ADMIN_PASSWORD){ toast('Falsches Passwort'); return; }
+  let ok = false;
+  try{ ok = (await sha256(pw.trim())) === CFG.adminPasswordHash; }
+  catch(e){ toast('Passwortprüfung ist in diesem Browser nicht möglich.'); return; }
+  if(!ok){ toast('Falsches Passwort'); return; }
   currentUser = {type:'admin'};
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser)); }catch(e){}
   render();
@@ -275,6 +333,7 @@ async function switchUser(){
   render();
 }
 async function initApp(){
+  loadState();
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -378,10 +437,17 @@ function adminClearNeed(classId){
 
 // ---------- Rendering ----------
 function render(){
+  saveState();
   const app = document.getElementById('app');
   if(!currentUser){ renderLogin(app); return; }
   if(currentUser.type==='admin'){ renderAdmin(app); return; }
   renderClassApp(app);
+}
+
+function localNotice(){
+  return CFG.localOnlyNotice
+    ? '<div class="local-note">Hinweis: Eingaben bleiben auf diesem Gerät. Andere Handys sehen sie noch nicht.</div>'
+    : '';
 }
 
 function dateLine(){
@@ -393,6 +459,7 @@ function renderLogin(app){
     <header class="top">
       <div class="eyebrow">Personalhilfe</div>
       <h1>Wer bist du?</h1>
+      ${localNotice()}
     </header>
     <div class="card">
       <h2>Deine Klasse</h2>
@@ -428,7 +495,8 @@ function renderClassApp(app){
       <div class="block-progress">
         <span class="current-block">Aktuell: ${DAY_BLOCKS[currentBlockIndex]}</span>
       </div>
-      ${notifyReady? '' : `<button class="notify-btn" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>`}
+      ${(!CFG.features.notifications || notifyReady)? '' : `<button class="notify-btn" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>`}
+      ${localNotice()}
     </header>
 
     <div class="card overview-card">
@@ -543,6 +611,7 @@ function renderAdmin(app){
         <button class="advance-btn" onclick="advanceBlock()">${currentBlockIndex<DAY_BLOCKS.length-1? DAY_BLOCKS[currentBlockIndex]+' beenden ›' : 'Schultag beenden'}</button>
       </div>
       <div class="block-progress-caption">Zusagen für nur diesen Zeitraum laufen dann automatisch ab</div>
+      ${localNotice()}
     </header>
 
     <div class="card overview-card">
