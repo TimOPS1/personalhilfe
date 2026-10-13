@@ -8,21 +8,24 @@ window.PERSONALHILFE_CONFIG = {
   // SHA-256-Hash des Schulleitungs-Passworts (das Passwort selbst steht nicht im Code).
   // Neuen Hash erzeugen: im Browser die Konsole öffnen und eingeben:
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('NEUES-PASSWORT')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-  adminPasswordHash: "2c013a7e49a8ced055e2ee3f1abd6c84fecaa1cb73b3f39d5477fcdef798a46a",
+  adminPasswordHash: "",
 
   // Gemeinsamer Betrieb über Supabase. Solange url und anonKey leer sind, arbeitet die App
   // nur lokal auf dem jeweiligen Handy. Beide Werte stehen in Supabase unter
   // "Project Settings" -> "API". Der anon-Schlüssel ist für die Öffentlichkeit gedacht,
   // geschützt wird über die Regeln aus supabase/schema.sql. Den "service_role"-Schlüssel
   // darf man NIEMALS hier eintragen.
-  supabase: { url: "", anonKey: "" },
+  supabase: {
+    url: "https://surunzsxklrglcgqcnxv.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1cnVuenN4a2xyZ2xjZ3Fjbnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4ODQxNTAsImV4cCI6MjEwNzQ2MDE1MH0.cvfR5Y5Zdqcw9eALIyZEUGS3gfN0RKcHZXYkxpYJtnM"
+  },
 
   // Beispieldaten beim Start anzeigen (zum Ausprobieren). Für den Echtbetrieb: false.
   demoData: false,
 
   // Hinweis "Eingaben bleiben auf diesem Gerät" anzeigen. Erst abschalten, wenn die Daten
   // wirklich zwischen den Handys geteilt werden.
-  localOnlyNotice: true,
+  localOnlyNotice: false,
 
   features: {
     // Benachrichtigungen funktionieren erst mit Server (Web Push). Bis dahin aus.
