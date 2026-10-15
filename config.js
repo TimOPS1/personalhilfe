@@ -3,8 +3,17 @@
 window.PERSONALHILFE_CONFIG = {
   // Namen der Klassen, in dieser Reihenfolge. Hier lassen sich auch neutrale
   // Bezeichnungen wie "G2a", "G2b" oder "H1" bis "H6" eintragen.
+  // Bitte keine Namen von Personen verwenden (z. B. nicht "Klasse Müller").
+  // Wer eine Klasse später umbenennen will, ohne dass ihre Meldungen des Tages verloren
+  // gehen, schreibt statt "Name" einen Eintrag wie { id: "klassea", name: "Neuer Name" }.
   classes: ["Klasse A", "Klasse B", "Klasse C", "Klasse D", "Klasse E", "Klasse F", "Klasse G", "Klasse H", "Klasse I", "Klasse J", "Klasse K", "Klasse L"],
 
+  // Ende der Zeiträume (1. Block, 2. Block, Mittagessen, 3. Block). Die App schaltet danach
+  // automatisch weiter. Gilt nur im lokalen Betrieb; im gemeinsamen Betrieb stehen die Zeiten
+  // in supabase/schema.sql (Funktion ph_block_ends) und werden von dort übernommen.
+  blockEnds: ["10:30", "11:45", "12:45", "14:25"],
+
+  // Nur für den lokalen Betrieb ohne Supabase. Kein echter Schutz, weil dieser Hash öffentlich ist.
   // SHA-256-Hash des Schulleitungs-Passworts (das Passwort selbst steht nicht im Code).
   // Neuen Hash erzeugen: im Browser die Konsole öffnen und eingeben:
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('NEUES-PASSWORT')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))

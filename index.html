@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Personalhilfe</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2F6F63">
@@ -31,38 +31,44 @@
     margin:0; background:var(--bg); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
   }
-  .app{max-width:480px;margin:0 auto;padding:20px 16px 90px;}
+  button{font-family:inherit;}
+  .app{
+    max-width:480px;margin:0 auto;
+    padding:calc(20px + env(safe-area-inset-top)) 16px calc(90px + env(safe-area-inset-bottom));
+  }
   header.top{padding:4px 2px 18px;}
   .eyebrow{font-size:13px;color:var(--ink-light);}
   h1{font-size:24px;margin:2px 0 0;font-weight:650;letter-spacing:-0.01em;color:#4B5C52;}
 
   .session-bar{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-top:12px;font-size:13px;color:var(--ink-soft);
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    margin-top:12px;font-size:14px;color:var(--ink-soft);
   }
   .switch-btn{
-    border:none;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);
-    border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);color:var(--ink-soft);
+    border-radius:10px;padding:0 14px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer;
   }
   .switch-btn:active{background:var(--line);}
 
   .block-progress{
-    display:flex;justify-content:space-between;align-items:center;
+    display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
     margin-top:12px;padding:9px 12px;background:var(--card);
     border:1px solid var(--line);border-radius:12px;
   }
-  .current-block{font-size:13px;font-weight:600;color:var(--teal-deep);}
+  .current-block{font-size:14px;font-weight:600;color:var(--teal-deep);}
+  .advance-row{display:flex;gap:8px;}
   .advance-btn{
-    border:none;background:var(--bg);color:var(--ink-soft);border-radius:8px;
-    padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;
+    padding:0 12px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer;
   }
   .advance-btn:active{background:var(--line);}
-  .block-progress-caption{font-size:11px;color:var(--ink-soft);margin-top:6px;padding:0 2px;}
+  .block-progress-caption{font-size:12.5px;color:var(--ink-soft);margin-top:6px;padding:0 2px;line-height:1.35;}
 
   .notify-btn{
     border:1px dashed var(--line);background:transparent;color:var(--teal-deep);
-    border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:600;
+    border-radius:10px;min-height:44px;font-size:14px;font-weight:600;
     cursor:pointer;width:100%;margin-top:12px;
   }
 
@@ -70,119 +76,116 @@
   .overview-summary{display:flex;gap:10px;margin-bottom:12px;}
   .ov-stat{
     flex:1;border-radius:12px;padding:9px 6px;text-align:center;
-    font-size:11.5px;color:var(--ink-soft);font-weight:600;
+    font-size:12.5px;color:var(--ink-soft);font-weight:600;
   }
   .ov-stat span{display:block;font-size:19px;font-weight:700;color:var(--ink);margin-bottom:1px;}
   .ov-stat.ov-need{background:var(--amber-soft);}
   .ov-stat.ov-flat{background:var(--bg);}
 
-  .ov-grid{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:7px;
-  }
-  .ov-cell{
-    border-radius:11px;padding:9px 8px;cursor:pointer;border:1.5px solid transparent;
-  }
+  .ov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  @media (max-width:340px){ .ov-grid{grid-template-columns:repeat(2,1fr);} }
+  .ov-cell{border-radius:11px;padding:9px 8px;border:1.5px solid transparent;}
   .ov-cell.ov-need{background:var(--amber-soft);}
   .ov-cell.ov-flat{background:var(--bg);}
   .ov-cell.ov-mine{border-color:var(--teal);}
-  .ov-name{font-size:12.5px;font-weight:700;color:var(--ink);}
-  .ov-label{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .ov-name{font-size:13px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
+  .ov-label{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 
+  .step-label{font-size:13px;font-weight:600;color:var(--ink-soft);margin-top:14px;}
   .stepper-row{
     display:flex;justify-content:space-between;align-items:center;
-    padding:9px 2px;border-top:1px solid var(--line);margin-top:10px;
+    padding:6px 2px 0;margin-top:4px;
   }
-  .stepper-label{font-size:14px;font-weight:600;color:var(--ink);}
-  .stepper-btns{display:flex;gap:8px;}
+  .stepper-label{font-size:16px;font-weight:600;color:var(--ink);}
+  .stepper-btns{display:flex;gap:10px;}
   .step-btn{
-    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
-    background:var(--card);font-size:17px;font-weight:600;color:var(--ink);
+    width:48px;height:48px;border-radius:12px;border:1px solid var(--line);
+    background:var(--card);font-size:22px;font-weight:600;color:var(--ink);
     cursor:pointer;display:flex;align-items:center;justify-content:center;
   }
   .step-btn:active{background:var(--bg);}
   .step-btn:disabled{color:var(--line);cursor:default;}
+  .need-state{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.35;}
+  .need-state.live{color:#8A5A14;font-weight:600;}
 
-  .block-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .block-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
   .block-chip{
-    font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);
-    color:var(--ink-soft);cursor:pointer;background:var(--card);
+    font-size:14px;padding:0 12px;min-height:44px;border-radius:10px;border:1px solid var(--line);
+    color:var(--ink-soft);cursor:pointer;background:var(--card);font-weight:500;
   }
-  .block-chip.small{font-size:11px;padding:4px 8px;}
   .block-chip.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600;}
+  /* Ausgewählt, aber noch nicht gemeldet */
+  .block-chip.draft{background:#E4F1EC;border:1.5px dashed var(--teal);color:var(--teal-deep);font-weight:600;}
   .block-chip.covered{background:#E4F1EC;border-color:transparent;color:var(--teal-deep);cursor:default;font-weight:600;}
+  .block-chip:disabled{color:var(--ink-light);background:var(--bg);text-decoration:line-through;cursor:default;}
 
   .card{
     background:var(--card);border:1px solid var(--line);border-radius:16px;
     padding:16px;margin-bottom:12px;
   }
-  .card h2{font-size:12.5px;text-transform:none;color:var(--ink-soft);
-    margin:0 0 10px;font-weight:600;}
+  .card h2{font-size:13.5px;color:var(--ink-soft);margin:0 0 10px;font-weight:600;}
   .mine .name{font-size:19px;font-weight:650;}
 
-  .need-card{border-left:3px solid var(--amber);}
-  .need-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .need-card{border-left:3px solid var(--amber);padding-left:12px;}
   .need-title{font-size:16px;font-weight:600;}
-  .need-sub{font-size:13px;color:var(--ink-soft);margin-top:3px;}
-  .status-pill{
-    display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:20px;
-    margin-top:8px;font-weight:600;background:var(--amber-soft);color:#8A5A14;
-  }
+  .need-sub{font-size:14px;color:var(--ink-soft);margin-top:3px;}
 
   button.help-btn{
-    border:none;background:var(--teal);color:#fff;border-radius:11px;
-    padding:10px 16px;font-size:14.5px;font-weight:600;cursor:pointer;
+    border:none;background:var(--teal);color:#fff;border-radius:12px;
+    padding:0 16px;min-height:48px;font-size:15px;font-weight:600;cursor:pointer;
     width:100%;margin-top:10px;transition:.15s;
   }
   button.help-btn:active{transform:scale(0.98);}
   button.help-btn:disabled{background:var(--line);color:var(--ink-soft);cursor:default;}
 
-  button.ghost-btn{
-    border:1px solid var(--line);background:var(--card);color:var(--ink);
-    border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;
-  }
   button.danger-btn{
-    border:none;background:none;color:var(--danger);font-size:12px;cursor:pointer;
+    border:1px solid #EBC9C0;background:#FBF1EE;color:var(--danger);
+    border-radius:10px;padding:0 12px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer;
   }
+  button.danger-btn:active{background:#F5DED7;}
 
-  .empty{color:var(--ink-soft);font-size:13.5px;padding:6px 2px;}
+  .empty{color:var(--ink-soft);font-size:14px;padding:6px 2px;}
 
   .flow-row{
-    display:flex;align-items:center;gap:8px;padding:9px 0;
+    display:flex;align-items:center;gap:8px;padding:10px 0;
     border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap;
   }
   .flow-row:last-child{border-bottom:none;}
   .flow-badge{
     background:var(--teal-deep);color:#fff;border-radius:8px;
-    padding:3px 8px;font-size:12.5px;font-weight:600;
+    padding:3px 8px;font-size:13px;font-weight:600;
   }
   .flow-arrow{color:var(--ink-soft);}
-  .flow-time{margin-left:auto;font-size:12px;color:var(--ink-soft);}
+  .flow-time{margin-left:auto;font-size:13px;color:var(--ink-soft);}
+  .flow-actions{width:100%;display:flex;justify-content:flex-end;}
 
-  .admin-label{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-top:14px;display:block;}
+  .admin-label{font-size:13.5px;color:var(--ink-soft);font-weight:600;margin-top:14px;display:block;}
   .admin-label:first-child{margin-top:0;}
   .admin-select{
-    width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
-    background:var(--card);font-size:14px;color:var(--ink);margin-top:6px;
+    width:100%;padding:0 10px;min-height:48px;border-radius:10px;border:1px solid var(--line);
+    background:var(--card);font-size:16px;color:var(--ink);margin-top:6px;
   }
 
   .login-list{display:flex;flex-direction:column;gap:8px;}
   .login-row{
-    display:flex;justify-content:space-between;align-items:center;
-    border:1px solid var(--line);border-radius:11px;padding:12px 14px;
-    cursor:pointer;background:var(--card);
+    display:flex;justify-content:space-between;align-items:center;width:100%;
+    border:1px solid var(--line);border-radius:12px;padding:0 14px;min-height:52px;
+    cursor:pointer;background:var(--card);font-size:16px;color:var(--ink);text-align:left;
   }
   .login-row:active{background:var(--bg);}
-  .login-hint{font-size:12px;color:var(--ink-soft);margin-top:10px;}
+  .login-hint{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.4;}
 
-  .local-note{margin-top:12px;padding:8px 11px;background:var(--amber-soft);color:#8A5A14;border-radius:10px;font-size:12px;line-height:1.35;}
+  .local-note{margin-top:12px;padding:10px 12px;background:var(--amber-soft);color:#8A5A14;border-radius:10px;font-size:13px;line-height:1.4;}
+  .error-note{margin:0 0 12px;padding:10px 12px;background:#FBF1EE;color:var(--danger);border-radius:10px;font-size:13px;line-height:1.4;}
 
-  .code-input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card);color:var(--ink);}
+  .code-input{width:100%;padding:0 12px;min-height:48px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card);color:var(--ink);}
   .code-input + .help-btn{margin-top:12px;}
 
   .toast{
-    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
-    background:var(--teal-deep);color:#fff;padding:10px 18px;border-radius:12px;
-    font-size:13.5px;opacity:0;transition:.25s;pointer-events:none;
+    position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--teal-deep);color:#fff;padding:12px 18px;border-radius:12px;
+    font-size:14px;opacity:0;transition:.25s;pointer-events:none;
     box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:85vw;text-align:center;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -190,7 +193,7 @@
 </head>
 <body>
 <div class="app" id="app"></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -201,6 +204,7 @@ const DAY_BLOCKS = ['1. Block','2. Block','Mittagessen','3. Block'];
 const USER_CFG = window.PERSONALHILFE_CONFIG || {};
 const CFG = Object.assign({
   classes: ['Klasse A','Klasse B','Klasse C'],
+  blockEnds: ['10:30','11:45','12:45','14:25'],
   adminPasswordHash: '',
   demoData: false,
   localOnlyNotice: true
@@ -214,17 +218,40 @@ const TOKEN_KEY = 'personalhilfe.admintoken';
 const BACKEND = window.PH_BACKEND || null;
 const REMOTE = !!BACKEND;
 
-// ---------- Zustand ----------
-function slug(str){ return String(str).toLowerCase().replace(/[^a-z0-9]+/g,'') || 'k'; }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+// ---------- Klassen ----------
+// Kennung aus dem Namen: Umlaute ausschreiben, nur Kleinbuchstaben und Ziffern.
+// Für Namen ohne Umlaute ergibt das dieselbe Kennung wie frühere Fassungen.
+function slug(str){
+  return String(str).toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'').slice(0,40);
+}
+const configErrors = [];
 let classes = (()=>{
   const seen = {};
-  return CFG.classes.map((name,i)=>{
-    let id = slug(name);
-    if(seen[id]) id = id + '_' + i;
-    seen[id] = 1;
-    return {id, name:String(name), need:0, needBlocks:[]};
+  const out = [];
+  (CFG.classes || []).forEach(entry=>{
+    const name = String(typeof entry === 'object' && entry ? entry.name : entry);
+    const id = typeof entry === 'object' && entry && entry.id ? String(entry.id) : slug(name);
+    if(!/^[a-z0-9_-]{1,40}$/.test(id)){
+      configErrors.push(`„${name}“ hat keine gültige Kennung (nur a–z, 0–9, - und _).`);
+      return;
+    }
+    if(seen[id]){
+      configErrors.push(`„${seen[id]}“ und „${name}“ ergeben dieselbe Kennung „${id}“. Bitte einen Namen ändern oder eine eigene id angeben.`);
+      return;
+    }
+    seen[id] = name;
+    out.push({id, name, need:0, needBlocks:[]});
   });
+  return out;
 })();
+
 let flows = [];
 if(CFG.demoData && classes.length >= 4){
   classes[0].need = 1; classes[0].needBlocks = DAY_BLOCKS.slice();
@@ -233,7 +260,6 @@ if(CFG.demoData && classes.length >= 4){
   flows = [{id:0, from:classes[1].id, to:classes[0].id, time:'08:55', active:true, blocks:['1. Block','2. Block']}];
 }
 let flowIdSeq = flows.length;
-let currentBlockIndex = 0;
 let currentUser = null; // {type:'class', classId} | {type:'admin'} | null
 let myClassId = null;
 let pendingSendBlocks = {};
@@ -245,6 +271,45 @@ let remoteFailed = false;
 let connectionOk = true;
 let remoteStarted = false;
 let renderDeferred = false;
+let busy = false;
+
+// ---------- Zeiträume ----------
+// Im gemeinsamen Betrieb liefert die Datenbank den geltenden Zeitraum und die Endzeiten.
+let serverBlockIndex = 0;
+let blockEnds = (REMOTE ? [] : CFG.blockEnds).slice();
+// Lokal: manueller Eingriff der Schulleitung, gilt bis zum nächsten Uhr-Wechsel
+let manualBlock = null; // {index, autoAtSet}
+
+function toMinutes(hhmm){ const [h,m] = String(hhmm).split(':').map(Number); return h*60 + (m||0); }
+// Minuten seit Mitternacht. Gemeinsamer Betrieb: deutsche Zeit wie in der Datenbank.
+function minutesNow(){
+  const d = new Date();
+  if(!REMOTE) return d.getHours()*60 + d.getMinutes();
+  const p = new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+  const get = t => Number((p.find(x=>x.type===t)||{}).value || 0);
+  return get('hour')*60 + get('minute');
+}
+function autoBlock(){
+  const now = minutesNow();
+  return blockEnds.filter(e=>toMinutes(e) <= now).length;
+}
+function curBlock(){
+  if(REMOTE) return serverBlockIndex;
+  const auto = autoBlock();
+  if(!manualBlock) return auto;
+  if(auto > manualBlock.autoAtSet) return Math.max(auto, manualBlock.index);
+  return manualBlock.index;
+}
+// Nächster Uhr-Wechsel: dann neu zeichnen bzw. neu laden
+let boundaryTimer = null;
+function scheduleBoundary(){
+  clearTimeout(boundaryTimer);
+  const now = minutesNow();
+  const next = blockEnds.map(toMinutes).find(m=>m > now);
+  if(next === undefined) return;
+  const ms = (next - now) * 60000 - new Date().getSeconds()*1000 + 3000;
+  boundaryTimer = setTimeout(()=>{ if(REMOTE) refreshRemote(); else safeRender(); scheduleBoundary(); }, Math.max(ms, 1000));
+}
 
 // ---------- Lokale Speicherung (pro Gerät, nur für den heutigen Tag) ----------
 function todayKey(){ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
@@ -254,7 +319,7 @@ function saveState(){
     localStorage.setItem(STATE_KEY, JSON.stringify({
       day: todayKey(),
       classes: classes.map(c=>({id:c.id, need:c.need, needBlocks:c.needBlocks})),
-      flows, flowIdSeq, currentBlockIndex
+      flows, flowIdSeq, manualBlock
     }));
   }catch(e){}
 }
@@ -263,27 +328,30 @@ function loadState(){
     const raw = localStorage.getItem(STATE_KEY);
     if(!raw) return;
     const st = JSON.parse(raw);
-    if(st.day !== todayKey()) return; // neuer Tag: frisch starten
+    if(st.day !== todayKey()){ localStorage.removeItem(STATE_KEY); return; } // neuer Tag: frisch starten
     classes.forEach(c=>{
       const o = (st.classes||[]).find(x=>x.id===c.id);
       if(o){ c.need = o.need; c.needBlocks = o.needBlocks || []; }
     });
     flows = (st.flows||[]).filter(f=>classes.some(c=>c.id===f.from) && classes.some(c=>c.id===f.to));
     flowIdSeq = st.flowIdSeq || flows.length;
-    currentBlockIndex = Math.max(0, Math.min(st.currentBlockIndex||0, DAY_BLOCKS.length));
+    manualBlock = st.manualBlock || null;
   }catch(e){}
 }
 
 function classNameOf(id){ const c = classes.find(x=>x.id===id); return c? c.name : id; }
 
-function isFutureBlock(b){ return DAY_BLOCKS.indexOf(b) >= currentBlockIndex; }
+function isFutureBlock(b){ return DAY_BLOCKS.indexOf(b) >= curBlock(); }
+function futureBlocks(){ return DAY_BLOCKS.filter(isFutureBlock); }
+// Ein Bedarf gilt nur für die ausdrücklich gewählten Zeiträume
 function requiredBlocks(c){
   if(c.need <= 0) return [];
-  const chosen = c.needBlocks || [];
-  const all = chosen.length>0 ? DAY_BLOCKS.filter(b=>chosen.includes(b)) : DAY_BLOCKS.slice();
-  return all.filter(isFutureBlock);
+  return DAY_BLOCKS.filter(b=>(c.needBlocks||[]).includes(b) && isFutureBlock(b));
 }
-function blockName(){ return currentBlockIndex < DAY_BLOCKS.length ? DAY_BLOCKS[currentBlockIndex] : 'Schultag beendet'; }
+function blockName(){
+  const i = curBlock();
+  return i < DAY_BLOCKS.length ? DAY_BLOCKS[i] : 'Schultag beendet';
+}
 // Einsätze, ohne bereits vergangene Zeiträume
 function liveFlows(){
   return flows.filter(f=>f.active)
@@ -291,8 +359,7 @@ function liveFlows(){
     .filter(f=>f.blocks.length>0);
 }
 function blockLabel(arr){
-  if(!arr || arr.length===0) return 'Ganzer Tag';
-  if(DAY_BLOCKS.every(b=>arr.includes(b))) return 'Ganzer Tag';
+  if(arr.length === DAY_BLOCKS.length) return 'Ganzer Tag';
   return DAY_BLOCKS.filter(b=>arr.includes(b)).join(', ');
 }
 function coverCount(classId, block){
@@ -314,7 +381,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(window.__toastT);
-  window.__toastT = setTimeout(()=>t.classList.remove('show'), 2400);
+  window.__toastT = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 function maybeNotify(title, body){
   if(!CFG.features.notifications) return;
@@ -342,13 +409,15 @@ async function sha256(text){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+// Passwort aus dem eigenen Eingabefeld (verdeckt), nicht über prompt()
 async function loginAsAdmin(){
-  if(REMOTE) return remoteAdminLogin();
+  const el = document.getElementById('adminPw');
+  const pw = ((el && el.value) || '').trim();
+  if(!pw){ toast('Bitte das Passwort eingeben.'); if(el) el.focus(); return; }
+  if(REMOTE) return remoteAdminLogin(pw);
   if(!CFG.adminPasswordHash){ toast('Der Schulleitungs-Zugang ist nicht eingerichtet.'); return; }
-  const pw = prompt('Passwort für Schulleitung:');
-  if(pw === null) return;
   let ok = false;
-  try{ ok = (await sha256(pw.trim())) === CFG.adminPasswordHash; }
+  try{ ok = (await sha256(pw)) === CFG.adminPasswordHash; }
   catch(e){ toast('Passwortprüfung ist in diesem Browser nicht möglich.'); return; }
   if(!ok){ toast('Falsches Passwort'); return; }
   currentUser = {type:'admin'};
@@ -356,11 +425,18 @@ async function loginAsAdmin(){
   render();
 }
 async function switchUser(){
+  if(currentUser && currentUser.type === 'admin'){
+    if(!confirm('Als Schulleitung abmelden?')) return;
+    if(REMOTE && adminToken) BACKEND.rpc('ph_admin_logout', {p_token: adminToken}); // Sitzung auch auf dem Server beenden
+  }
   currentUser = null; myClassId = null; adminToken = '';
   try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(TOKEN_KEY); }catch(e){}
   render();
 }
 async function initApp(){
+  document.addEventListener('focusout', ()=>{
+    if(renderDeferred){ renderDeferred = false; setTimeout(render, 0); }
+  });
   if(!REMOTE) loadState();
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -379,6 +455,8 @@ async function initApp(){
     if(remoteCode) await startRemote();
     return;
   }
+  scheduleBoundary();
+  setInterval(safeRender, 60000);
   render();
 }
 
@@ -402,59 +480,78 @@ function sendHelp(fromId, toId){
   toast(`${from.name} → ${to.name} · ${chosen.join(', ')}`);
   render();
 }
+// Zeitraum der eigenen Meldung an- oder abwählen. Vergangene Zeiträume sind nicht wählbar.
+// Solange ein Bedarf gemeldet ist, muss mindestens ein kommender Zeitraum gewählt bleiben.
 function toggleNeedBlock(classId, block){
   const c = classes.find(x=>x.id===classId);
+  const future = futureBlocks();
+  let next;
   if(block === 'Ganzer Tag'){
-    const allSelected = DAY_BLOCKS.every(b=>c.needBlocks.includes(b));
-    c.needBlocks = allSelected ? [] : DAY_BLOCKS.slice();
+    const allSelected = future.length>0 && future.every(b=>c.needBlocks.includes(b));
+    next = allSelected ? [] : future.slice();
   } else {
-    const i = c.needBlocks.indexOf(block);
-    if(i>=0) c.needBlocks.splice(i,1); else c.needBlocks.push(block);
+    if(!future.includes(block)) return;
+    next = c.needBlocks.filter(b=>future.includes(b));
+    const i = next.indexOf(block);
+    if(i>=0) next.splice(i,1); else next.push(block);
   }
+  if(c.need > 0 && next.length === 0){
+    toast('Mindestens ein Zeitraum muss gewählt bleiben. Zum Zurücknehmen den Bedarf mit − auf 0 setzen.');
+    return;
+  }
+  c.needBlocks = DAY_BLOCKS.filter(b=>next.includes(b));
   render();
   if(REMOTE && c.need>0) pushNeed(c);
 }
 function requestNeed(classId, qty){
   const c = classes.find(x=>x.id===classId);
+  if(qty > 0 && requiredBlocksDraft(c).length === 0){
+    toast('Bitte zuerst oben den Zeitraum wählen.');
+    return;
+  }
   const wasZero = c.need <= 0;
-  c.need = Math.max(0, c.need + qty);
+  c.need = Math.max(0, Math.min(9, c.need + qty));
   if(c.need <= 0) c.needBlocks = [];
   if(qty>0){
-    toast(`Bedarf gemeldet: +${qty} Erwachsene(r) für ${c.name}`);
-    if(wasZero && !REMOTE) maybeNotify('Personalbedarf', `${c.name} braucht Unterstützung (${blockLabel(c.needBlocks)})`);
+    toast(`Gemeldet: ${c.need} Erwachsene(r) für ${blockLabel(requiredBlocksDraft(c))}`);
+    if(wasZero && !REMOTE) maybeNotify('Personalbedarf', `${c.name} braucht Unterstützung (${blockLabel(requiredBlocksDraft(c))})`);
   } else {
-    toast('Rückgängig gemacht');
+    toast(c.need > 0 ? `Bedarf verringert auf ${c.need}` : 'Bedarf zurückgenommen');
   }
   render();
   if(REMOTE) pushNeed(c);
 }
+// Gewählte, noch kommende Zeiträume (auch bevor etwas gemeldet ist)
+function requiredBlocksDraft(c){ return DAY_BLOCKS.filter(b=>(c.needBlocks||[]).includes(b) && isFutureBlock(b)); }
 function endFlow(id){
-  if(REMOTE) return remoteEnd(id);
   const f = flows.find(x=>x.id===id);
+  if(f && !confirm(`Unterstützung ${classNameOf(f.from)} → ${classNameOf(f.to)} beenden?`)) return;
+  if(REMOTE) return remoteEnd(id);
   if(!f) return;
   f.active = false;
   toast('Unterstützung beendet');
   render();
 }
-// Zeitraum weiter- oder zurückschalten (nur Schulleitung). Einsätze werden dabei nicht gelöscht,
-// vergangene Zeiträume zählen einfach nicht mehr. So lässt sich ein Fehlklick rückgängig machen.
+// Zeitraum manuell weiter- oder zurückschalten (nur Schulleitung). Gilt bis zum nächsten
+// Uhr-Wechsel, danach schaltet wieder die Uhr. Einsätze werden dabei nicht gelöscht.
 async function stepBlock(delta){
-  const next = Math.max(0, Math.min(DAY_BLOCKS.length, currentBlockIndex + delta));
-  if(next === currentBlockIndex) return;
+  const cur = curBlock();
+  const next = Math.max(0, Math.min(DAY_BLOCKS.length, cur + delta));
+  if(next === cur) return;
   if(REMOTE){
-    const res = await remoteCall('ph_admin_set_block', {p_token:adminToken, p_index:next});
-    if(res.ok) await refreshRemote();
+    if(busy) return;
+    busy = true;
+    try{
+      const res = await remoteCall('ph_admin_set_block', {p_token:adminToken, p_index:next});
+      if(res.ok) toast(`Jetzt: ${next < DAY_BLOCKS.length ? DAY_BLOCKS[next] : 'Schultag beendet'}`);
+    } finally { busy = false; }
+    await refreshRemote();
     return;
   }
-  currentBlockIndex = next;
-  if(delta > 0){
-    toast(next < DAY_BLOCKS.length ? `${DAY_BLOCKS[next-1]} beendet — jetzt: ${DAY_BLOCKS[next]}` : `${DAY_BLOCKS[next-1]} beendet — Schultag zu Ende`);
-  } else {
-    toast(`Zurück bei: ${blockName()}`);
-  }
+  manualBlock = {index: next, autoAtSet: autoBlock()};
+  toast(`Jetzt: ${blockName()}`);
   render();
 }
-function advanceBlock(){ return stepBlock(1); }
 
 // ---------- Schulleitung ----------
 function setAdminField(field, value){ adminForm[field] = value; render(); }
@@ -464,8 +561,9 @@ function toggleAdminBlock(block){
   render();
 }
 function adminAssign(){
+  adminForm.blocks = adminForm.blocks.filter(isFutureBlock);
   if(!adminForm.from || !adminForm.to || adminForm.from===adminForm.to || adminForm.blocks.length===0){
-    toast('Bitte Von-Klasse, Zu-Klasse und mindestens einen Zeitraum wählen.'); return;
+    toast('Bitte Von-Klasse, Zu-Klasse und mindestens einen Zeitraum wählen.'); render(); return;
   }
   if(REMOTE) return remoteAssign();
   flows.push({id:flowIdSeq++, from:adminForm.from, to:adminForm.to, time:now(), active:true, blocks:adminForm.blocks.slice()});
@@ -474,6 +572,7 @@ function adminAssign(){
   render();
 }
 function adminClearNeed(classId){
+  if(!confirm(`Bedarf von ${classNameOf(classId)} schließen?`)) return;
   if(REMOTE) return remoteClear(classId);
   const c = classes.find(x=>x.id===classId);
   c.need = 0; c.needBlocks = [];
@@ -486,17 +585,17 @@ const ERR_TEXT = {
   netz: 'Keine Verbindung. Bitte gleich nochmal versuchen.',
   code: 'Der Schulcode stimmt nicht (mehr). Bitte neu eingeben.',
   token: 'Bitte als Schulleitung neu anmelden.',
-  gesperrt: 'Zu viele Fehlversuche. Bitte in 10 Minuten erneut versuchen.',
+  gesperrt: 'Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.',
   passwort: 'Falsches Passwort',
   schon_gedeckt: 'Schon gedeckt, jemand war schneller.',
   vergangen: 'Dieser Zeitraum ist schon vorbei.',
   kein_bedarf: 'Diese Klasse meldet gerade keinen Bedarf.',
   nicht_gefunden: 'Nicht mehr vorhanden.',
+  zeitraum: 'Bitte zuerst einen Zeitraum wählen.',
   ungueltig: 'Eingabe ungültig.'
 };
 let pendingPushes = 0;
 let pushChain = Promise.resolve();
-let sendingNow = false;
 
 function berlinTime(iso){
   try{ return new Date(iso).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}); }
@@ -527,64 +626,90 @@ function applyRemote(d){
     const row = (d.needs||[]).find(r=>r.class_id === c.id);
     c.need = row ? row.need : 0;
     if(c.need > 0) c.needBlocks = (row.blocks||[]).slice();
-    else if(c.id !== myClassId) c.needBlocks = [];
+    else if(c.id !== myClassId) c.needBlocks = []; // eigene Auswahl bleibt als Entwurf stehen
   });
   const known = id => classes.some(c=>c.id === id);
   flows = (d.flows||[]).filter(f=>known(f.from_class) && known(f.to_class))
     .map(f=>({id:f.id, from:f.from_class, to:f.to_class, blocks:(f.blocks||[]).slice(), active:!!f.active, time:berlinTime(f.created_at)}));
-  const dayRow = (d.day||[])[0];
-  currentBlockIndex = dayRow ? Math.max(0, Math.min(dayRow.block_index, DAY_BLOCKS.length)) : 0;
+  serverBlockIndex = Math.max(0, Math.min(Number(d.block_index)||0, DAY_BLOCKS.length));
+  if(Array.isArray(d.block_ends)) blockEnds = d.block_ends.slice();
+  scheduleBoundary();
 }
-// Während ein Auswahlfeld offen ist, nicht neu zeichnen (sonst klappt es zu)
+// Während ein Auswahl- oder Eingabefeld aktiv ist, nicht neu zeichnen (sonst klappt es zu
+// bzw. das Getippte geht verloren)
 function safeRender(){
   const a = document.activeElement;
-  if(a && a.tagName === 'SELECT'){ renderDeferred = true; return; }
+  if(a && (a.tagName === 'SELECT' || a.tagName === 'INPUT')){ renderDeferred = true; return; }
   render();
 }
+// Neu laden, höchstens alle 2 Sekunden, auch wenn viele Live-Signale kommen
+let refreshing = false, refreshAgain = false, lastFetch = 0, refreshTimer = null;
+function scheduleRefresh(delay){
+  clearTimeout(refreshTimer);
+  const wait = Math.max(delay || 300, 2000 - (Date.now() - lastFetch));
+  refreshTimer = setTimeout(refreshRemote, wait);
+}
 async function refreshRemote(){
+  if(!remoteCode) return;
+  if(refreshing){ refreshAgain = true; return; }
+  refreshing = true;
+  lastFetch = Date.now();
   try{
-    applyRemote(await BACKEND.fetchDay());
-    remoteLoaded = true; remoteFailed = false; connectionOk = true;
-  }catch(e){
-    connectionOk = false;
-    if(!remoteLoaded) remoteFailed = true;
+    const res = await BACKEND.fetchDay(remoteCode);
+    if(res && res.ok){
+      applyRemote(res);
+      remoteLoaded = true; remoteFailed = false; connectionOk = true;
+    } else if(res && (res.error === 'code' || res.error === 'gesperrt')){
+      if(!remoteLoaded) remoteFailed = true;
+      handleRemoteFail(res);
+    } else {
+      connectionOk = false;
+      if(!remoteLoaded) remoteFailed = true;
+    }
+  } finally {
+    refreshing = false;
   }
   safeRender();
+  if(refreshAgain){ refreshAgain = false; scheduleRefresh(); }
 }
 async function startRemote(){
   if(remoteStarted){ await refreshRemote(); return; }
   remoteStarted = true;
-  BACKEND.subscribe(()=>{
-    clearTimeout(window.__rtTimer);
-    window.__rtTimer = setTimeout(refreshRemote, 150);
-  });
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshRemote(); });
-  document.addEventListener('focusout', ()=>{
-    if(renderDeferred){ renderDeferred = false; setTimeout(render, 0); }
-  });
-  window.addEventListener('online', refreshRemote);
-  setInterval(refreshRemote, 60000);
+  BACKEND.subscribe(()=>scheduleRefresh(150));
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) scheduleRefresh(0); });
+  window.addEventListener('online', ()=>scheduleRefresh(0));
+  setInterval(()=>scheduleRefresh(0), 60000);
   await refreshRemote();
 }
 async function submitCode(){
   const el = document.getElementById('codeInput');
   const code = ((el && el.value) || '').trim();
   if(!code){ toast('Bitte den Schulcode eingeben.'); return; }
-  const res = await BACKEND.rpc('ph_login_code', {p_code:code});
+  if(busy) return;
+  busy = true;
+  let res;
+  try{ res = await BACKEND.rpc('ph_login_code', {p_code:code}); }
+  finally{ busy = false; }
   if(!res.ok){ toast(ERR_TEXT[res.error] || ERR_TEXT.netz); return; }
   remoteCode = code;
+  remoteFailed = false;
   try{ localStorage.setItem(CODE_KEY, code); }catch(e){}
+  if(el) el.blur();
   render();
   await startRemote();
 }
-async function remoteAdminLogin(){
-  const pw = prompt('Passwort für Schulleitung:');
-  if(pw === null) return;
-  const res = await remoteCall('ph_admin_login', {p_code:remoteCode, p_password:pw.trim()});
+async function remoteAdminLogin(pw){
+  if(busy) return;
+  busy = true;
+  let res;
+  try{ res = await remoteCall('ph_admin_login', {p_code:remoteCode, p_password:pw}); }
+  finally{ busy = false; }
   if(!res.ok) return;
   adminToken = res.token;
   currentUser = {type:'admin'};
   try{ localStorage.setItem(TOKEN_KEY, adminToken); localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser)); }catch(e){}
+  const el = document.getElementById('adminPw');
+  if(el) el.blur();
   render();
 }
 // Bedarf speichern. Mehrere schnelle Klicks werden nacheinander gesendet, es gilt der letzte Stand.
@@ -602,13 +727,13 @@ function pushNeed(c){
   return pushChain;
 }
 async function remoteSend(fromId, toId){
-  if(sendingNow) return;
+  if(busy) return;
   const from = classes.find(c=>c.id === fromId);
   const to = classes.find(c=>c.id === toId);
   const open = openBlocksFor(to);
   const chosen = (pendingSendBlocks[toId]||[]).filter(b=>open.includes(b));
   if(chosen.length === 0){ toast('Bitte mindestens einen Zeitraum auswählen.'); render(); return; }
-  sendingNow = true;
+  busy = true;
   try{
     const res = await remoteCall('ph_send', {p_code:remoteCode, p_from:fromId, p_to:toId, p_blocks:chosen});
     pendingSendBlocks[toId] = [];
@@ -619,27 +744,41 @@ async function remoteSend(fromId, toId){
         : `${from.name} → ${to.name} · ${res.blocks.join(', ')}`);
     }
   } finally {
-    sendingNow = false;
+    busy = false;
   }
   await refreshRemote();
 }
 async function remoteEnd(id){
-  const res = await remoteCall('ph_end_flow', {p_code:remoteCode, p_id:id});
-  if(res.ok) toast('Unterstützung beendet');
+  if(busy) return;
+  busy = true;
+  try{
+    const res = (currentUser && currentUser.type === 'admin')
+      ? await remoteCall('ph_admin_end_flow', {p_token:adminToken, p_id:id})
+      : await remoteCall('ph_end_flow', {p_code:remoteCode, p_class:myClassId, p_id:id});
+    if(res.ok) toast('Unterstützung beendet');
+  } finally { busy = false; }
   await refreshRemote();
 }
 async function remoteAssign(){
+  if(busy) return;
   const form = {from:adminForm.from, to:adminForm.to, blocks:adminForm.blocks.slice()};
-  const res = await remoteCall('ph_admin_assign', {p_token:adminToken, p_from:form.from, p_to:form.to, p_blocks:form.blocks});
-  if(res.ok){
-    toast(`${classNameOf(form.from)} → ${classNameOf(form.to)} zugewiesen`);
-    adminForm.blocks = [];
-  }
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_assign', {p_token:adminToken, p_from:form.from, p_to:form.to, p_blocks:form.blocks});
+    if(res.ok){
+      toast(`${classNameOf(form.from)} → ${classNameOf(form.to)} zugewiesen`);
+      adminForm.blocks = [];
+    }
+  } finally { busy = false; }
   await refreshRemote();
 }
 async function remoteClear(classId){
-  const res = await remoteCall('ph_admin_clear_need', {p_token:adminToken, p_class:classId});
-  if(res.ok) toast(`Bedarf von ${classNameOf(classId)} geschlossen`);
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_clear_need', {p_token:adminToken, p_class:classId});
+    if(res.ok) toast(`Bedarf von ${classNameOf(classId)} geschlossen`);
+  } finally { busy = false; }
   await refreshRemote();
 }
 function renderCodeGate(app){
@@ -648,11 +787,13 @@ function renderCodeGate(app){
       <div class="eyebrow">Personalhilfe</div>
       <h1>Schulcode</h1>
     </header>
+    ${configNotice()}
     <div class="card">
       <h2>Bitte einmalig eingeben</h2>
-      <input id="codeInput" class="code-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schulcode" onkeydown="if(event.key==='Enter')submitCode()">
+      <input id="codeInput" class="code-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schulcode" aria-label="Schulcode" onkeydown="if(event.key==='Enter')submitCode()">
       <button class="help-btn" onclick="submitCode()">Weiter</button>
-      <div class="login-hint">Den Code gibt es von der Schulleitung. Er wird auf diesem Handy gemerkt.</div>
+      <div class="login-hint">Den Code gibt es von der Schulleitung. Er wird auf diesem Handy gemerkt.<br>
+      Auf dem iPhone fragt die App nach „Zum Home-Bildschirm“ noch einmal nach dem Code. Das ist normal.</div>
     </div>
   `;
 }
@@ -679,6 +820,11 @@ function render(){
   renderClassApp(app);
 }
 
+function configNotice(){
+  return configErrors.length
+    ? `<div class="error-note"><strong>Fehler in config.js:</strong><br>${configErrors.map(esc).join('<br>')}</div>`
+    : '';
+}
 function localNotice(){
   if(REMOTE){
     return connectionOk ? '' : '<div class="local-note">Keine Verbindung. Die Anzeige kann veraltet sein und Änderungen werden gerade nicht gespeichert.</div>';
@@ -692,60 +838,18 @@ function dateLine(){
   return new Date().toLocaleDateString('de-DE',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
 }
 
-function renderLogin(app){
-  app.innerHTML = `
-    <header class="top">
-      <div class="eyebrow">Personalhilfe</div>
-      <h1>Wer bist du?</h1>
-      ${localNotice()}
-    </header>
-    <div class="card">
-      <h2>Deine Klasse</h2>
-      <div class="login-list">
-        ${classes.map(c=>`<div class="login-row" onclick="selectClass('${c.id}')"><span>${c.name}</span><span style="color:var(--ink-light)">›</span></div>`).join('')}
-      </div>
-    </div>
-    <div class="card">
-      <h2>Schulleitung</h2>
-      <button class="help-btn" onclick="loginAsAdmin()">Als Schulleitung anmelden</button>
-      <div class="login-hint">Passwortgeschützt · gibt Zugriff auf alle Klassen</div>
-    </div>
-  `;
-}
-
-function renderClassApp(app){
-  const mine = classes.find(c=>c.id===myClassId);
-  const others = classes.filter(c=>c.id!==myClassId);
-  const openNeeds = others.filter(c=>needStatus(c)==='open');
-  const activeFlows = liveFlows();
+function overviewCard(highlightMine){
   const needClasses = classes.filter(c=>needStatus(c)==='open');
-  const balancedClasses = classes.filter(c=>needStatus(c)!=='open');
-  const notifyReady = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-
-  app.innerHTML = `
-    <header class="top">
-      <div class="eyebrow">Heute · ${dateLine()}</div>
-      <h1>Personalübersicht</h1>
-      <div class="session-bar">
-        <span>Angemeldet als ${mine.name}</span>
-        <button class="switch-btn" onclick="switchUser()">Neu wählen</button>
-      </div>
-      <div class="block-progress">
-        <span class="current-block">Aktuell: ${blockName()}</span>
-      </div>
-      ${(!CFG.features.notifications || notifyReady)? '' : `<button class="notify-btn" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>`}
-      ${localNotice()}
-    </header>
-
+  return `
     <div class="card overview-card">
       <div class="overview-summary">
         <div class="ov-stat ov-need"><span>${needClasses.length}</span>Hilfe nötig</div>
-        <div class="ov-stat ov-flat"><span>${balancedClasses.length}</span>ausgeglichen</div>
+        <div class="ov-stat ov-flat"><span>${classes.length - needClasses.length}</span>ausgeglichen</div>
       </div>
       <div class="ov-grid">
         ${classes.map(c=>{
           const st = needStatus(c);
-          const isMine = c.id===myClassId;
+          const isMine = highlightMine && c.id===myClassId;
           let cls='ov-flat', label='ausgeglichen';
           if(st==='open'){
             cls='ov-need';
@@ -754,27 +858,105 @@ function renderClassApp(app){
             label = open.length===req.length ? `braucht: ${blockLabel(req)}` : `offen: ${open.join(', ')}`;
           }
           return `<div class="ov-cell ${cls} ${isMine?'ov-mine':''}">
-            <div class="ov-name">${c.name}${isMine?' · du':''}</div>
+            <div class="ov-name">${esc(c.name)}${isMine?' · du':''}</div>
             <div class="ov-label">${label}</div>
           </div>`;
         }).join('')}
       </div>
-    </div>
+    </div>`;
+}
 
+function flowList(canEnd){
+  const activeFlows = liveFlows();
+  if(activeFlows.length===0) return `<div class="empty">Momentan läuft kein Personalaustausch.</div>`;
+  return activeFlows.map(f=>`<div class="flow-row">
+      <span class="flow-badge">${esc(classNameOf(f.from))}</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-badge" style="background:var(--teal)">${esc(classNameOf(f.to))}</span>
+      <span style="color:var(--ink-soft)">· ${f.blocks.join(', ')}</span>
+      <span class="flow-time">${f.time}</span>
+      ${canEnd(f)? `<div class="flow-actions"><button class="danger-btn" onclick="endFlow(${Number(f.id)})">Beenden</button></div>`:''}
+    </div>`).join('');
+}
+
+function renderLogin(app){
+  app.innerHTML = `
+    <header class="top">
+      <div class="eyebrow">Personalhilfe</div>
+      <h1>Wer bist du?</h1>
+      ${localNotice()}
+    </header>
+    ${configNotice()}
     <div class="card">
       <h2>Deine Klasse</h2>
-      <div class="mine"><div class="name">${mine.name}</div></div>
+      <div class="login-list">
+        ${classes.map(c=>`<button type="button" class="login-row" onclick="selectClass('${c.id}')"><span>${esc(c.name)}</span><span style="color:var(--ink-light)" aria-hidden="true">›</span></button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h2>Schulleitung</h2>
+      <input id="adminPw" class="code-input" type="password" autocomplete="current-password" placeholder="Passwort Schulleitung" aria-label="Passwort Schulleitung" onkeydown="if(event.key==='Enter')loginAsAdmin()">
+      <button class="help-btn" onclick="loginAsAdmin()">Als Schulleitung anmelden</button>
+      <div class="login-hint">Gibt Zugriff auf alle Klassen.</div>
+    </div>
+  `;
+}
+
+function renderClassApp(app){
+  const mine = classes.find(c=>c.id===myClassId);
+  const others = classes.filter(c=>c.id!==myClassId);
+  const openNeeds = others.filter(c=>needStatus(c)==='open');
+  const notifyReady = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  const future = futureBlocks();
+  const draft = requiredBlocksDraft(mine);
+  const live = mine.need > 0;
+  const chipCls = b => mine.needBlocks.includes(b) ? (live ? 'active' : 'draft') : '';
+  const allFuture = future.length>0 && future.every(b=>mine.needBlocks.includes(b));
+  const myOpen = openBlocksFor(mine);
+
+  let stateLine;
+  if(future.length === 0) stateLine = '<div class="need-state">Der Schultag ist beendet.</div>';
+  else if(!live) stateLine = draft.length
+    ? `<div class="need-state">Noch nichts gemeldet. Mit + für ${blockLabel(draft)} melden.</div>`
+    : '<div class="need-state">Noch nichts gemeldet.</div>';
+  else if(requiredBlocks(mine).length === 0) stateLine = '<div class="need-state">Die gemeldeten Zeiträume sind vorbei.</div>';
+  else stateLine = `<div class="need-state live">Gemeldet: ${mine.need} Erwachsene(r) für ${blockLabel(requiredBlocks(mine))}${myOpen.length ? ` · noch offen: ${myOpen.join(', ')}` : ' · alles gedeckt'}</div>`;
+
+  app.innerHTML = `
+    <header class="top">
+      <div class="eyebrow">Heute · ${dateLine()}</div>
+      <h1>Personalübersicht</h1>
+      <div class="session-bar">
+        <span>Angemeldet als ${esc(mine.name)}</span>
+        <button class="switch-btn" onclick="switchUser()">Neu wählen</button>
+      </div>
+      <div class="block-progress">
+        <span class="current-block">Aktuell: ${blockName()}</span>
+      </div>
+      ${(!CFG.features.notifications || notifyReady)? '' : `<button class="notify-btn" onclick="enableNotifications()">🔔 Benachrichtigungen aktivieren</button>`}
+      ${localNotice()}
+    </header>
+    ${configNotice()}
+
+    ${overviewCard(true)}
+
+    <div class="card">
+      <h2>Deine Klasse braucht Unterstützung?</h2>
+      <div class="mine"><div class="name">${esc(mine.name)}</div></div>
+      <div class="step-label">1. Zeitraum wählen</div>
+      <div class="block-row">
+        ${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${chipCls(b)}" aria-pressed="${mine.needBlocks.includes(b)}" ${isFutureBlock(b)?'':'disabled'} onclick="toggleNeedBlock('${mine.id}','${b}')">${b}</button>`).join('')}
+        <button type="button" class="block-chip ${allFuture ? (live ? 'active' : 'draft') : ''}" aria-pressed="${allFuture}" ${future.length?'':'disabled'} onclick="toggleNeedBlock('${mine.id}','Ganzer Tag')">Ganzer Tag</button>
+      </div>
+      <div class="step-label">2. Anzahl Erwachsene melden</div>
       <div class="stepper-row">
         <span class="stepper-label">Bedarf: ${mine.need}</span>
         <div class="stepper-btns">
-          <button class="step-btn" ${mine.need<=0?'disabled':''} onclick="requestNeed('${mine.id}',-1)">−</button>
-          <button class="step-btn" onclick="requestNeed('${mine.id}',1)">+</button>
+          <button class="step-btn" aria-label="Bedarf verringern" ${mine.need<=0?'disabled':''} onclick="requestNeed('${mine.id}',-1)">−</button>
+          <button class="step-btn" aria-label="Bedarf erhöhen" ${(draft.length===0 || mine.need>=9)?'disabled':''} onclick="requestNeed('${mine.id}',1)">+</button>
         </div>
       </div>
-      <div class="block-row">
-        ${DAY_BLOCKS.map(b=>`<span class="block-chip ${mine.needBlocks.includes(b)?'active':''}" onclick="toggleNeedBlock('${mine.id}','${b}')">${b}</span>`).join('')}
-        <span class="block-chip ${DAY_BLOCKS.every(b=>mine.needBlocks.includes(b))?'active':''}" onclick="toggleNeedBlock('${mine.id}','Ganzer Tag')">Ganzer Tag</span>
-      </div>
+      ${stateLine}
     </div>
 
     <div class="card">
@@ -783,27 +965,21 @@ function renderClassApp(app){
         openNeeds.map(c=>{
           const req = requiredBlocks(c);
           const open = openBlocksFor(c);
-          const chosen = pendingSendBlocks[c.id] || [];
+          const chosen = (pendingSendBlocks[c.id] || []).filter(b=>open.includes(b));
           const partial = open.length < req.length;
           return `
-          <div class="need-card" style="margin-bottom:14px;">
-            <div class="need-row">
-              <div>
-                <div class="need-title">${c.name} braucht Unterstützung</div>
-                <div class="need-sub">${partial? `Noch offen: ${open.join(', ')}` : `Zeitraum: ${blockLabel(req)}`}</div>
-              </div>
-            </div>
-            <span class="status-pill">offen</span>
+          <div class="need-card" style="margin-bottom:16px;">
+            <div class="need-title">${esc(c.name)} braucht Unterstützung</div>
+            <div class="need-sub">${partial? `Noch offen: ${open.join(', ')}` : `Zeitraum: ${blockLabel(req)}`}</div>
             <div class="block-row" style="margin-top:10px;">
               ${req.map(b=>{
-                const isOpen = open.includes(b);
+                if(!open.includes(b)) return `<span class="block-chip covered" style="display:inline-flex;align-items:center;">✓ ${b}</span>`;
                 const isChosen = chosen.includes(b);
-                if(!isOpen) return `<span class="block-chip covered">✓ ${b}</span>`;
-                return `<span class="block-chip small ${isChosen?'active':''}" onclick="toggleSendBlock('${c.id}','${b}')">${b}</span>`;
+                return `<button type="button" class="block-chip ${isChosen?'active':''}" aria-pressed="${isChosen}" onclick="toggleSendBlock('${c.id}','${b}')">${b}</button>`;
               }).join('')}
             </div>
             <button class="help-btn" ${chosen.length===0?'disabled':''} onclick="sendHelp('${mine.id}','${c.id}')">
-              ${chosen.length===0? 'Zeitraum(e) wählen' : `Schicken für: ${chosen.join(', ')}`}
+              ${chosen.length===0? 'Zeitraum wählen, dann schicken' : `Jemanden schicken für: ${chosen.join(', ')}`}
             </button>
           </div>`;
         }).join('')
@@ -812,29 +988,15 @@ function renderClassApp(app){
 
     <div class="card">
       <h2>Aktive Unterstützung</h2>
-      ${activeFlows.length===0? `<div class="empty">Momentan läuft kein Personalaustausch.</div>` :
-        activeFlows.map(f=>{
-          const from = classes.find(c=>c.id===f.from);
-          const to = classes.find(c=>c.id===f.to);
-          return `<div class="flow-row">
-            <span class="flow-badge">${from.name}</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-badge" style="background:var(--teal)">${to.name}</span>
-            <span style="color:var(--ink-soft)">· ${f.blocks.join(', ')}</span>
-            <span class="flow-time">${f.time}</span>
-            ${(f.from===mine.id||f.to===mine.id)? `<button class="danger-btn" onclick="endFlow(${f.id})">beenden</button>`:''}
-          </div>`;
-        }).join('')
-      }
+      ${flowList(f=>f.from===mine.id||f.to===mine.id)}
     </div>
   `;
 }
 
 function renderAdmin(app){
-  const activeFlows = liveFlows();
   const openNeedClasses = classes.filter(c=>needStatus(c)==='open');
-  const needClasses = openNeedClasses;
-  const balancedClasses = classes.filter(c=>needStatus(c)!=='open');
+  const cur = curBlock();
+  const times = blockEnds.length === DAY_BLOCKS.length ? blockEnds.join(' · ') : '';
 
   app.innerHTML = `
     <header class="top">
@@ -842,38 +1004,18 @@ function renderAdmin(app){
       <h1>Schulleitung</h1>
       <div class="session-bar">
         <span>Master-Kontrolle</span>
-        <button class="switch-btn" onclick="switchUser()">Neu wählen</button>
+        <button class="switch-btn" onclick="switchUser()">Abmelden</button>
       </div>
       <div class="block-progress">
         <span class="current-block">Aktuell: ${blockName()}</span>
-        <span>${currentBlockIndex>0? '<button class="advance-btn" onclick="stepBlock(-1)">‹ zurück</button> ' : ''}${currentBlockIndex<DAY_BLOCKS.length? `<button class="advance-btn" onclick="stepBlock(1)">${DAY_BLOCKS[currentBlockIndex]} beenden ›</button>` : ''}</span>
+        <span class="advance-row">${cur>0? '<button class="advance-btn" onclick="stepBlock(-1)">‹ Zurück</button>' : ''}${cur<DAY_BLOCKS.length? `<button class="advance-btn" onclick="stepBlock(1)">Weiter ›</button>` : ''}</span>
       </div>
-      <div class="block-progress-caption">Zusagen für nur diesen Zeitraum laufen dann automatisch ab</div>
+      <div class="block-progress-caption">${times ? `Wechselt automatisch um ${times} Uhr. ` : ''}Manuelles Umschalten gilt bis zur nächsten Uhrzeit. Zusagen für vergangene Zeiträume laufen automatisch ab.</div>
       ${localNotice()}
     </header>
+    ${configNotice()}
 
-    <div class="card overview-card">
-      <div class="overview-summary">
-        <div class="ov-stat ov-need"><span>${needClasses.length}</span>Hilfe nötig</div>
-        <div class="ov-stat ov-flat"><span>${balancedClasses.length}</span>ausgeglichen</div>
-      </div>
-      <div class="ov-grid">
-        ${classes.map(c=>{
-          const st = needStatus(c);
-          let cls='ov-flat', label='ausgeglichen';
-          if(st==='open'){
-            cls='ov-need';
-            const open = openBlocksFor(c);
-            const req = requiredBlocks(c);
-            label = open.length===req.length ? `braucht: ${blockLabel(req)}` : `offen: ${open.join(', ')}`;
-          }
-          return `<div class="ov-cell ${cls}" style="cursor:default;">
-            <div class="ov-name">${c.name}</div>
-            <div class="ov-label">${label}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
+    ${overviewCard(false)}
 
     <div class="card">
       <h2>Alle offenen Bedarfe</h2>
@@ -881,9 +1023,9 @@ function renderAdmin(app){
         openNeedClasses.map(c=>{
           const open = openBlocksFor(c);
           return `<div class="flow-row">
-            <span class="flow-badge" style="background:var(--amber);color:#4A3200;">${c.name}</span>
+            <span class="flow-badge" style="background:var(--amber);color:#4A3200;">${esc(c.name)}</span>
             <span style="color:var(--ink-soft)">offen: ${open.join(', ')}</span>
-            <button class="danger-btn" style="margin-left:auto;" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button>
+            <div class="flow-actions"><button class="danger-btn" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button></div>
           </div>`;
         }).join('')
       }
@@ -891,39 +1033,26 @@ function renderAdmin(app){
 
     <div class="card">
       <h2>Personal manuell zuweisen</h2>
-      <label class="admin-label">Von Klasse</label>
-      <select class="admin-select" onchange="setAdminField('from', this.value)">
+      <label class="admin-label" for="admFrom">Von Klasse</label>
+      <select id="admFrom" class="admin-select" onchange="setAdminField('from', this.value)">
         <option value="">– wählen –</option>
-        ${classes.map(c=>`<option value="${c.id}" ${adminForm.from===c.id?'selected':''}>${c.name}</option>`).join('')}
+        ${classes.map(c=>`<option value="${c.id}" ${adminForm.from===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
       </select>
-      <label class="admin-label">Zu Klasse</label>
-      <select class="admin-select" onchange="setAdminField('to', this.value)">
+      <label class="admin-label" for="admTo">Zu Klasse</label>
+      <select id="admTo" class="admin-select" onchange="setAdminField('to', this.value)">
         <option value="">– wählen –</option>
-        ${classes.map(c=>`<option value="${c.id}" ${adminForm.to===c.id?'selected':''}>${c.name}</option>`).join('')}
+        ${classes.map(c=>`<option value="${c.id}" ${adminForm.to===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
       </select>
       <label class="admin-label">Zeitraum</label>
       <div class="block-row">
-        ${DAY_BLOCKS.map(b=>`<span class="block-chip ${adminForm.blocks.includes(b)?'active':''}" onclick="toggleAdminBlock('${b}')">${b}</span>`).join('')}
+        ${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${adminForm.blocks.includes(b)&&isFutureBlock(b)?'active':''}" aria-pressed="${adminForm.blocks.includes(b)}" ${isFutureBlock(b)?'':'disabled'} onclick="toggleAdminBlock('${b}')">${b}</button>`).join('')}
       </div>
       <button class="help-btn" onclick="adminAssign()">Zuweisen</button>
     </div>
 
     <div class="card">
       <h2>Alle aktiven Einsätze</h2>
-      ${activeFlows.length===0? `<div class="empty">Momentan läuft kein Personalaustausch.</div>` :
-        activeFlows.map(f=>{
-          const from = classes.find(c=>c.id===f.from);
-          const to = classes.find(c=>c.id===f.to);
-          return `<div class="flow-row">
-            <span class="flow-badge">${from.name}</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-badge" style="background:var(--teal)">${to.name}</span>
-            <span style="color:var(--ink-soft)">· ${f.blocks.join(', ')}</span>
-            <span class="flow-time">${f.time}</span>
-            <button class="danger-btn" onclick="endFlow(${f.id})">beenden</button>
-          </div>`;
-        }).join('')
-      }
+      ${flowList(()=>true)}
     </div>
   `;
 }
