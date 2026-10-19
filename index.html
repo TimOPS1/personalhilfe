@@ -218,6 +218,16 @@
   .mx .mx-sel{outline:2px solid var(--teal);}
   .mx small{display:block;font-weight:500;font-size:.85em;}
   .mode-row{display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+  .date-row{display:flex;gap:10px;margin-top:6px;}
+  .date-row label{flex:1;min-width:0;font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .date-row input{min-width:0;width:100%;}
+  .week-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .week-title{font-weight:700;color:var(--teal-deep);flex:1;text-align:center;min-width:12em;}
+  .advance-btn:disabled{opacity:.35;cursor:default;}
+  .mx.mx-week{grid-template-columns:minmax(6.5em,1fr) repeat(5,minmax(0,1fr));min-width:560px;}
+  .mx-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .mx .mx-free{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 6px,#ECEFE9 6px,#ECEFE9 12px);color:var(--ink-soft);}
+  .mx .mx-h small{display:block;font-weight:500;color:var(--ink-soft);}
   .text-input{width:100%;padding:0 10px;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:16px;color:var(--ink);margin-top:6px;font-family:inherit;}
   .hint{font-size:12.5px;color:var(--ink-soft);margin-top:8px;line-height:1.35;}
   .person-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px;flex-wrap:wrap;}
@@ -329,6 +339,14 @@ let covers = [];   // {id, name, to, blocks, active}
 let staffSeq = 0;
 let lastRefresh = '';
 let lastDesktop = null;
+// Planung im Voraus (nur gemeinsamer Betrieb)
+let plan = {absent:[], cover:[], free:[], loaded:false};
+let adminTab = 'heute';            // 'heute' | 'plan'
+let weekOffset = 0;                // 0 = aktuelle Woche
+let planSel = null;                // {day, classId} in der Wochenansicht
+let planForm = {kind:'absent', name:'', classId:'', from:'', to:'', blocks:[], label:''};
+let classPlanForm = {name:'', from:'', to:'', blocks:[]};
+const PLAN_DAYS = 183;
 const VIEW_KEY = 'personalhilfe.view';
 const DISPLAY = (typeof location !== 'undefined') && /^#anzeige/i.test(location.hash || '');
 let remoteCode = '';
@@ -753,6 +771,8 @@ const ERR_TEXT = {
   kein_bedarf: 'Diese Klasse meldet gerade keinen Bedarf.',
   nicht_gefunden: 'Nicht mehr vorhanden.',
   zeitraum: 'Bitte zuerst einen Zeitraum wählen.',
+  datum: 'Datum ungültig. Möglich ist heute bis in 6 Monaten.',
+  keine_schultage: 'In diesem Zeitraum liegen keine Schultage.',
   ungueltig: 'Eingabe ungültig.'
 };
 let pendingPushes = 0;
@@ -819,7 +839,13 @@ async function refreshRemote(){
   refreshing = true;
   lastFetch = Date.now();
   try{
-    const res = await BACKEND.fetchDay(remoteCode);
+    // Planung nur für angemeldete Klassen und Schulleitung, nicht für die Aula-Anzeige
+    const wantPlan = !DISPLAY && !!currentUser;
+    const [res, pl] = await Promise.all([
+      BACKEND.fetchDay(remoteCode),
+      wantPlan ? BACKEND.rpc('ph_fetch_plan', {p_code:remoteCode, p_from:null, p_to:null}) : Promise.resolve(null)
+    ]);
+    if(pl && pl.ok) applyPlan(pl);
     if(res && res.ok){
       applyRemote(res);
       remoteLoaded = true; remoteFailed = false; connectionOk = true;
@@ -1213,6 +1239,8 @@ function renderClassApp(app){
       <h2>Aktive Unterstützung</h2>
       ${flowList(f=>f.from===mine.id||f.to===mine.id, 'anon')}
     </div>
+
+    ${classPlanCardHTML(mine)}
   `;
 }
 
@@ -1385,7 +1413,8 @@ function renderAdmin(app){
           <h1>Schulleitung</h1>
         </div>
         <div class="adm-tools">
-          <div class="block-progress">${blockControlsHTML()}</div>
+          ${adminTabsHTML()}
+          ${adminTab === 'heute' ? `<div class="block-progress">${blockControlsHTML()}</div>` : ''}
           ${viewToggleHTML()}
           <a class="switch-btn" href="#anzeige" target="_blank" rel="noopener">Aula-Anzeige ↗</a>
           ${REMOTE ? `<button class="switch-btn" onclick="copyDisplayLink()">Link für Anzeige kopieren</button>` : ''}
@@ -1394,7 +1423,7 @@ function renderAdmin(app){
       </header>
       ${localNotice()}
       ${configNotice()}
-      <div class="desk-grid">
+      ${adminTab === 'plan' ? planningBodyHTML(true) : `<div class="desk-grid">
         <div>
           <div class="card">
             ${summaryHTML()}
@@ -1408,7 +1437,7 @@ function renderAdmin(app){
           ${absentCardHTML()}
           ${openNeedsCardHTML()}
         </div>
-      </div>
+      </div>`}
     `;
     return;
   }
@@ -1421,8 +1450,9 @@ function renderAdmin(app){
         <span>Master-Kontrolle</span>
         <button class="switch-btn" onclick="switchUser()">Abmelden</button>
       </div>
-      <div class="block-progress">${blockControlsHTML()}</div>
-      <div class="block-progress-caption">${blockCaptionHTML()}</div>
+      <div class="adm-tools-m">${adminTabsHTML()}</div>
+      ${adminTab === 'heute' ? `<div class="block-progress">${blockControlsHTML()}</div>
+      <div class="block-progress-caption">${blockCaptionHTML()}</div>` : ''}
       <div class="adm-tools-m">
         ${viewToggleHTML()}
         <a class="switch-btn" href="#anzeige" target="_blank" rel="noopener">Anzeige ↗</a>
@@ -1432,12 +1462,297 @@ function renderAdmin(app){
     </header>
     ${configNotice()}
 
+    ${adminTab === 'plan' ? planningBodyHTML(false) : `
     ${overviewCard(false)}
     ${openNeedsCardHTML()}
     ${assignCardHTML()}
     ${absentCardHTML()}
-    ${activeEngagementsHTML()}
+    ${activeEngagementsHTML()}`}
   `;
+}
+
+// ---------- Planung im Voraus ----------
+// Datumsangaben als 'JJJJ-MM-TT'. "Heute" nach deutscher Zeit wie in der Datenbank.
+function isoToday(){
+  return new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Berlin', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+}
+function isoAdd(iso, n){
+  const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0,10);
+}
+function isoWeekday(iso){ const w = new Date(iso + 'T12:00:00Z').getUTCDay(); return w === 0 ? 7 : w; } // 1 = Mo
+function isoMonday(iso){ return isoAdd(iso, 1 - isoWeekday(iso)); }
+const WD = ['','Mo','Di','Mi','Do','Fr','Sa','So'];
+function fmtDay(iso){ const [y,m,d] = iso.split('-'); return `${WD[isoWeekday(iso)]} ${Number(d)}.${Number(m)}.`; }
+function fmtRange(a, b){ return a === b ? fmtDay(a) : `${fmtDay(a)} – ${fmtDay(b)}`; }
+function isoWeekNo(iso){
+  const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - y0) / 86400000 + 1) / 7);
+}
+
+function applyPlan(d){
+  const known = id => classes.some(c=>c.id === id);
+  const blocksOf = x => Array.isArray(x) ? x.filter(b=>DAY_BLOCKS.includes(b)) : [];
+  plan = {
+    absent: (d.absent||[]).map(a=>({id:a.id, day:String(a.day), name:String(a.name), class_id:a.class_id, blocks:blocksOf(a.blocks), series:a.series||null})),
+    cover: (d.cover||[]).filter(v=>known(v.to_class)).map(v=>({id:v.id, day:String(v.day), name:String(v.name), to:v.to_class, blocks:blocksOf(v.blocks), series:v.series||null})),
+    free: (d.free||[]).map(f=>({day:String(f.day), label:String(f.label||'')})),
+    loaded: true
+  };
+}
+function freeDay(iso){ return plan.free.find(f=>f.day === iso) || null; }
+
+// Zustand einer Klasse an einem Tag (heute zusätzlich mit gemeldetem Bedarf und Einsätzen)
+function dayState(c, iso){
+  const isToday = iso === isoToday();
+  const abs = plan.absent.filter(a=>a.day === iso && a.class_id === c.id);
+  const cov = plan.cover.filter(v=>v.day === iso && v.to === c.id);
+  let open = 0, needed = 0;
+  DAY_BLOCKS.forEach(b=>{
+    if(isToday && !isFutureBlock(b)) return;
+    let req = abs.filter(a=>absentBlocks(a).includes(b)).length;
+    let got = cov.filter(v=>v.blocks.includes(b)).length;
+    if(isToday){
+      req = Math.max(req, (c.need > 0 && (c.needBlocks||[]).includes(b)) ? c.need : 0);
+      got += flows.filter(f=>f.active && f.to===c.id && f.blocks.includes(b)).length;
+    }
+    if(req > 0){ needed++; if(got < req) open++; }
+  });
+  return {abs, cov, open, needed};
+}
+
+// Einträge zu Serien zusammenfassen (Einträge ohne Serie stehen einzeln)
+function seriesGroups(list, kind){
+  const map = new Map();
+  list.forEach(x=>{
+    const key = x.series || (kind + ':' + x.id);
+    if(!map.has(key)) map.set(key, {key, kind, series:x.series, ids:[], name:x.name, classId: kind==='absent' ? x.class_id : x.to, blocks:x.blocks, days:[]});
+    const g = map.get(key); g.ids.push(x.id); g.days.push(x.day);
+  });
+  return [...map.values()].map(g=>Object.assign(g, {first:g.days.slice().sort()[0], last:g.days.slice().sort().slice(-1)[0]}))
+    .sort((a,b)=>a.first < b.first ? -1 : a.first > b.first ? 1 : 0);
+}
+function blocksText(blocks){ return (blocks && blocks.length && blocks.length < DAY_BLOCKS.length) ? blockLabel(blocks) : 'Ganzer Tag'; }
+
+// ----- Aktionen -----
+function setAdminTab(t){ adminTab = t; planSel = null; render(); }
+function shiftWeek(n){ weekOffset = Math.max(0, Math.min(26, n === 0 ? 0 : weekOffset + n)); planSel = null; render(); }
+function pickPlanCell(day, classId){
+  planSel = (planSel && planSel.day === day && planSel.classId === classId) ? null : {day, classId};
+  if(planSel){ planForm.from = day; planForm.to = day; planForm.classId = classId; }
+  render();
+}
+function setPlanKind(k){ planForm.kind = k; render(); }
+function togglePlanBlock(b){ const i = planForm.blocks.indexOf(b); if(i>=0) planForm.blocks.splice(i,1); else planForm.blocks.push(b); render(); }
+function toggleClassPlanBlock(b){ const i = classPlanForm.blocks.indexOf(b); if(i>=0) classPlanForm.blocks.splice(i,1); else classPlanForm.blocks.push(b); render(); }
+function normRange(f){
+  const t = isoToday();
+  const from = f.from || t; let to = f.to || from;
+  if(to < from) to = from;
+  return {from, to};
+}
+async function planCall(name, args, okText, after){
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall(name, args);
+    if(res.ok){ toast(typeof okText === 'function' ? okText(res) : okText); if(after) after(); }
+  } finally { busy = false; }
+  await refreshRemote();
+}
+const daysText = res => res && res.days ? ` (${res.days} Schultag${res.days === 1 ? '' : 'e'})` : '';
+function submitPlan(){
+  const f = planForm, r = normRange(f), blocks = DAY_BLOCKS.filter(b=>f.blocks.includes(b));
+  const reset = ()=>{ planForm.name = ''; planForm.blocks = []; planForm.label = ''; };
+  if(f.kind === 'free'){
+    return planCall('ph_admin_set_free', {p_token:adminToken, p_from:r.from, p_to:r.to, p_label:f.label||''}, res=>'Unterrichtsfrei eingetragen' + daysText(res), reset);
+  }
+  const name = (f.name||'').trim();
+  if(!name){ toast('Bitte einen Namen eingeben.'); return; }
+  if(f.kind === 'cover'){
+    if(!f.classId){ toast('Bitte die Klasse wählen.'); return; }
+    return planCall('ph_admin_plan_cover', {p_token:adminToken, p_name:name, p_to_class:f.classId, p_from:r.from, p_to:r.to, p_blocks:blocks},
+      res=>`${name} vertritt in ${classNameOf(f.classId)}` + daysText(res), reset);
+  }
+  return planCall('ph_admin_plan_absent', {p_token:adminToken, p_name:name, p_class:f.classId||null, p_from:r.from, p_to:r.to, p_blocks:blocks},
+    res=>'Abwesenheit eingetragen' + daysText(res), reset);
+}
+function removeGroup(key){
+  const g = seriesGroups(plan.absent, 'absent').concat(seriesGroups(plan.cover, 'cover')).find(x=>x.key === key);
+  if(!g) return;
+  const what = g.kind === 'cover' ? `Vertretung ${g.name} → ${classNameOf(g.classId)}` : `Abwesenheit ${g.name}`;
+  if(!confirm(`${what} (${fmtRange(g.first, g.last)}) entfernen?`)) return;
+  if(g.series) return planCall('ph_admin_remove_series', {p_token:adminToken, p_series:g.series}, 'Entfernt');
+  return planCall(g.kind === 'cover' ? 'ph_admin_remove_cover' : 'ph_admin_remove_absent', {p_token:adminToken, p_id:g.ids[0]}, 'Entfernt');
+}
+function removeFree(from, to){
+  if(!confirm(`Unterrichtsfrei ${fmtRange(from, to)} entfernen?`)) return;
+  return planCall('ph_admin_remove_free', {p_token:adminToken, p_from:from, p_to:to}, 'Entfernt');
+}
+function submitClassPlan(){
+  const f = classPlanForm, r = normRange(f), blocks = DAY_BLOCKS.filter(b=>f.blocks.includes(b));
+  return planCall('ph_class_plan_absent', {p_code:remoteCode, p_class:myClassId, p_name:(f.name||'').trim(), p_from:r.from, p_to:r.to, p_blocks:blocks},
+    res=>'Im Voraus gemeldet' + daysText(res), ()=>{ classPlanForm.name = ''; classPlanForm.blocks = []; });
+}
+function classRemoveSeries(series){
+  if(!confirm('Diese Meldung für alle Tage entfernen?')) return;
+  return planCall('ph_class_remove_series', {p_code:remoteCode, p_class:myClassId, p_series:series}, 'Entfernt');
+}
+
+// ----- Bausteine -----
+function dateFieldsHTML(obj, objName){
+  const t = isoToday(), max = isoAdd(t, PLAN_DAYS);
+  return `<div class="date-row">
+    <label>von<input type="date" class="text-input" min="${t}" max="${max}" value="${esc(obj.from || t)}" onchange="${objName}.from=this.value"></label>
+    <label>bis<input type="date" class="text-input" min="${t}" max="${max}" value="${esc(obj.to || obj.from || t)}" onchange="${objName}.to=this.value"></label>
+  </div>`;
+}
+function weekHTML(){
+  const t = isoToday();
+  const mon = isoAdd(isoMonday(t), 7 * weekOffset);
+  const days = [0,1,2,3,4].map(i=>isoAdd(mon, i));
+  const head = `<div class="mx-h">Klasse</div>` + days.map(d=>{
+    const fr = freeDay(d);
+    return `<div class="mx-h ${d===t?'mx-now':''}">${fmtDay(d)}${fr ? `<small>${esc(fr.label || 'frei')}</small>` : ''}</div>`;
+  }).join('');
+  const rows = classes.map(c=>`<div class="mx-name">${esc(c.name)}</div>` + days.map(d=>{
+    if(d < t) return `<div class="mx-none mx-past">–</div>`;
+    if(freeDay(d)) return `<div class="mx-none mx-free">frei</div>`;
+    const st = dayState(c, d);
+    const sel = planSel && planSel.day === d && planSel.classId === c.id;
+    const who = st.abs.map(a=>esc(a.name)).concat(st.cov.map(v=>`<span class="mx-cv">${esc(v.name)}</span>`));
+    let cls = 'mx-none', txt = '–';
+    if(st.open > 0){ cls = 'mx-open'; txt = `fehlt` + (who.length ? `<small>${who.join(', ')}</small>` : ''); }
+    else if(st.needed > 0){ cls = 'mx-ok'; txt = `<span>✓ gedeckt</span><small>${who.join(', ')}</small>`; }
+    else if(st.cov.length){ cls = 'mx-ok mx-cover'; txt = `<span>${who.join(', ')}</span>`; }
+    return `<div class="${cls} mx-click${sel?' mx-sel':''}" onclick="pickPlanCell('${d}','${c.id}')">${txt}</div>`;
+  }).join('')).join('');
+  return `<div class="card">
+    <div class="week-nav">
+      <button class="advance-btn" ${weekOffset<=0?'disabled':''} onclick="shiftWeek(-1)">‹</button>
+      <div class="week-title">KW ${isoWeekNo(mon)} · ${fmtDay(days[0])} – ${fmtDay(days[4])}</div>
+      <button class="advance-btn" ${weekOffset>=26?'disabled':''} onclick="shiftWeek(1)">›</button>
+      ${weekOffset ? `<button class="advance-btn" onclick="shiftWeek(0)">Diese Woche</button>` : ''}
+    </div>
+    <div class="mx-scroll"><div class="mx mx-week" style="grid-template-rows:auto repeat(${classes.length},auto);">${head}${rows}</div></div>
+    <div class="hint">„fehlt“: mindestens ein Zeitraum ist nicht gedeckt. Feld anklicken für Details, Datum und Klasse werden ins Formular übernommen.</div>
+  </div>`;
+}
+function planDetailHTML(){
+  if(!planSel) return '';
+  const c = classes.find(x=>x.id === planSel.classId); if(!c) return '';
+  const st = dayState(c, planSel.day);
+  const keyOf = (x, kind)=> x.series || (kind + ':' + x.id);
+  const row = (x, kind)=>`<div class="person-row">
+      <span>${kind==='cover' ? '<b>Vertretung</b> ' : ''}${esc(x.name)}</span>
+      <span style="color:var(--ink-soft)">· ${blocksText(x.blocks)}</span>
+      <button class="danger-btn" style="margin-left:auto;" onclick="removeGroup('${keyOf(x, kind)}')">Entfernen</button>
+    </div>`;
+  return `<div class="card">
+    <h2>${fmtDay(planSel.day)} · ${esc(c.name)}</h2>
+    ${st.abs.length + st.cov.length === 0 ? `<div class="empty">Nichts eingetragen.</div>` : st.abs.map(a=>row(a,'absent')).join('') + st.cov.map(v=>row(v,'cover')).join('')}
+    <div class="hint">„Entfernen“ entfernt bei mehrtägigen Einträgen alle Tage ab heute.</div>
+  </div>`;
+}
+function planFormHTML(){
+  const f = planForm, k = f.kind;
+  const classOpts = (empty) => `<option value="">${empty}</option>` + classes.map(c=>`<option value="${c.id}" ${f.classId===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  return `<div class="card">
+    <h2>Im Voraus eintragen</h2>
+    <div class="mode-row">
+      <button type="button" class="block-chip ${k==='absent'?'active':''}" onclick="setPlanKind('absent')">Abwesenheit</button>
+      <button type="button" class="block-chip ${k==='cover'?'active':''}" onclick="setPlanKind('cover')">Vertretung</button>
+      <button type="button" class="block-chip ${k==='free'?'active':''}" onclick="setPlanKind('free')">Unterrichtsfrei</button>
+    </div>
+    ${k === 'free' ? `
+      <input class="text-input" type="text" maxlength="40" placeholder="Bezeichnung, z. B. Herbstferien" value="${esc(f.label)}" oninput="planForm.label=this.value">
+    ` : `
+      <input class="text-input" type="text" maxlength="60" autocomplete="off" placeholder="${k==='cover'?'Wer vertritt?':'Wer fehlt?'}" value="${esc(f.name)}" oninput="planForm.name=this.value">
+      <select class="admin-select" aria-label="Klasse" onchange="planForm.classId=this.value">${classOpts(k==='cover' ? 'In Klasse – wählen –' : 'Klasse (optional)')}</select>
+    `}
+    ${dateFieldsHTML(f, 'planForm')}
+    ${k === 'free' ? '' : `<label class="admin-label">Zeitraum</label>
+      <div class="block-row">${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${f.blocks.includes(b)?'active':''}" onclick="togglePlanBlock('${b}')">${b}</button>`).join('')}</div>`}
+    <div class="hint">${k === 'free' ? 'Wochenenden sind immer frei. Geplante Zeiträume überspringen freie Tage.' : 'Ohne Zeitraum: ganzer Tag. Wochenenden und unterrichtsfreie Tage werden übersprungen. Bis 6 Monate im Voraus.'}</div>
+    <button class="help-btn" onclick="submitPlan()">Eintragen</button>
+  </div>`;
+}
+function seriesListHTML(){
+  const groups = seriesGroups(plan.absent, 'absent').concat(seriesGroups(plan.cover, 'cover'))
+    .sort((a,b)=>a.first < b.first ? -1 : a.first > b.first ? 1 : 0);
+  return `<div class="card">
+    <h2>Geplant (${groups.length})</h2>
+    ${groups.length === 0 ? `<div class="empty">Noch nichts im Voraus eingetragen.</div>` : groups.map(g=>`<div class="person-row">
+        <span>${g.kind==='cover' ? '<b>Vertretung</b> ' : ''}${esc(g.name)}</span>
+        ${g.classId ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(g.classId))}</span>` : ''}
+        <span style="color:var(--ink-soft)">· ${fmtRange(g.first, g.last)}${g.days.length > 1 ? ` (${g.days.length} Tage)` : ''} · ${blocksText(g.blocks)}</span>
+        <button class="danger-btn" style="margin-left:auto;" onclick="removeGroup('${g.key}')">Entfernen</button>
+      </div>`).join('')}
+  </div>`;
+}
+function freeListHTML(){
+  // aufeinanderfolgende Schultage mit gleicher Bezeichnung zusammenfassen
+  const runs = [];
+  plan.free.forEach(f=>{
+    const last = runs[runs.length-1];
+    let gap = last ? last.to : null;
+    if(gap){ do { gap = isoAdd(gap, 1); } while(isoWeekday(gap) > 5); }
+    if(last && last.label === f.label && gap === f.day) last.to = f.day;
+    else runs.push({from:f.day, to:f.day, label:f.label});
+  });
+  return `<div class="card">
+    <h2>Unterrichtsfrei</h2>
+    ${runs.length === 0 ? `<div class="empty">Keine freien Tage eingetragen.</div>` : runs.map(r=>`<div class="person-row">
+        <span>${esc(r.label || 'frei')}</span><span style="color:var(--ink-soft)">· ${fmtRange(r.from, r.to)}</span>
+        <button class="danger-btn" style="margin-left:auto;" onclick="removeFree('${r.from}','${r.to}')">Entfernen</button>
+      </div>`).join('')}
+  </div>`;
+}
+function adminTabsHTML(){
+  return `<span class="seg" role="group" aria-label="Bereich">
+    <button type="button" class="${adminTab==='heute'?'on':''}" onclick="setAdminTab('heute')">Heute</button>
+    <button type="button" class="${adminTab==='plan'?'on':''}" onclick="setAdminTab('plan')">Planung</button>
+  </span>`;
+}
+function planningBodyHTML(desk){
+  if(!REMOTE) return `<div class="card"><div class="empty">Planung im Voraus gibt es nur im gemeinsamen Betrieb mit Supabase.</div></div>`;
+  if(desk) return `<div class="desk-grid">
+      <div>${weekHTML()}${planDetailHTML()}</div>
+      <div>${planFormHTML()}${seriesListHTML()}${freeListHTML()}</div>
+    </div>`;
+  return weekHTML() + planDetailHTML() + planFormHTML() + seriesListHTML() + freeListHTML();
+}
+// Klasse: im Voraus melden und eigene Planung sehen
+function classPlanCardHTML(mine){
+  if(!REMOTE) return '';
+  const f = classPlanForm;
+  const groups = seriesGroups(plan.absent.filter(a=>a.class_id === mine.id), 'absent');
+  const coverFor = g => {
+    const cv = plan.cover.filter(v=>v.to === mine.id && g.days.includes(v.day));
+    const byName = {};
+    cv.forEach(v=>{ (byName[v.name] = byName[v.name] || []).push(v.day); });
+    return Object.entries(byName).map(([n, ds])=>`${esc(n)} (${ds.length === g.days.length ? 'alle Tage' : ds.sort().map(fmtDay).join(', ')})`);
+  };
+  return `<div class="card">
+    <h2>Im Voraus melden</h2>
+    <input class="text-input" type="text" maxlength="60" autocomplete="off" placeholder="Wer fehlt? (Name, optional)" value="${esc(f.name)}" oninput="classPlanForm.name=this.value">
+    ${dateFieldsHTML(f, 'classPlanForm')}
+    <label class="admin-label">Zeitraum</label>
+    <div class="block-row">${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${f.blocks.includes(b)?'active':''}" onclick="toggleClassPlanBlock('${b}')">${b}</button>`).join('')}</div>
+    <div class="hint">Ohne Zeitraum: ganzer Tag. Wochenenden und unterrichtsfreie Tage werden übersprungen. Bitte keine Gründe angeben.</div>
+    <button class="help-btn" onclick="submitClassPlan()">Melden</button>
+    <label class="admin-label">Geplant für ${esc(mine.name)}</label>
+    ${groups.length === 0 ? `<div class="empty">Nichts geplant.</div>` : groups.map(g=>{
+      const cv = coverFor(g);
+      return `<div class="person-row">
+        <span>${esc(g.name)}</span>
+        <span style="color:var(--ink-soft)">· ${fmtRange(g.first, g.last)}${g.days.length > 1 ? ` (${g.days.length} Tage)` : ''} · ${blocksText(g.blocks)}</span>
+        ${g.series ? `<button class="danger-btn" style="margin-left:auto;" onclick="classRemoveSeries('${g.series}')">Entfernen</button>` : ''}
+        <div class="hint" style="width:100%;margin-top:2px;">${cv.length ? 'Vertretung geplant: ' + cv.join(', ') : 'Noch keine Vertretung geplant.'}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 // ---------- Anzeige für den Bildschirm in der Aula ----------
