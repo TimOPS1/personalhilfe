@@ -80,6 +80,8 @@ create table if not exists public.ph_absent (
   created_at timestamptz not null default now()
 );
 create index if not exists ph_absent_day_idx on public.ph_absent (day);
+-- Zeiträume der Abwesenheit. Leer = ganzer Tag. "Kommt später" = die frühen Zeiträume.
+alter table public.ph_absent add column if not exists blocks text[] not null default '{}';
 
 create table if not exists public.ph_cover (
   id         bigint generated always as identity primary key,
@@ -349,7 +351,7 @@ begin
                 'blocks', to_jsonb(blocks), 'active', active, 'created_at', created_at) order by id)
               from ph_flows where day = v_day), '[]'::jsonb),
     'absent', coalesce((select jsonb_agg(jsonb_build_object(
-                'id', id, 'name', name, 'class_id', class_id) order by id)
+                'id', id, 'name', name, 'class_id', class_id, 'blocks', to_jsonb(blocks)) order by id)
               from ph_absent where day = v_day), '[]'::jsonb),
     'cover', coalesce((select jsonb_agg(jsonb_build_object(
                 'id', id, 'name', name, 'to_class', to_class, 'blocks', to_jsonb(blocks)) order by id)
@@ -436,6 +438,8 @@ declare
   v_err      text := ph_check_code(p_code);
   v_day      date := ph_today();
   v_need     ph_needs%rowtype;
+  v_has_need boolean;
+  v_req      int;
   v_current  int;
   v_cand     text[];
   v_accept   text[] := '{}';
@@ -451,8 +455,13 @@ begin
     return ph_fail('ungueltig');
   end if;
 
-  select * into v_need from ph_needs where day = v_day and class_id = p_to for update;
-  if not found or v_need.need <= 0 then return ph_fail('kein_bedarf'); end if;
+  -- Zusagen an dieselbe Klasse nacheinander abarbeiten, damit nie mehr geschickt wird als nötig
+  perform pg_advisory_xact_lock(hashtext('ph_send:' || p_to));
+  select * into v_need from ph_needs where day = v_day and class_id = p_to;
+  v_has_need := found and v_need.need > 0;
+  if not v_has_need and not exists (select 1 from ph_absent where day = v_day and class_id = p_to) then
+    return ph_fail('kein_bedarf');
+  end if;
 
   v_current := ph_current_block();
   v_cand := ph_clean_blocks(p_blocks);
@@ -460,14 +469,19 @@ begin
   foreach b in array v_cand loop
     v_idx := array_position(ph_blocks(), b) - 1;   -- 0-basiert wie block_index
     if v_idx < v_current then v_past := v_past + 1; continue; end if;
-    if not (b = any (v_need.blocks)) then v_other := v_other + 1; continue; end if;
+    -- Bedarf in diesem Zeitraum: gemeldete Zahl oder Anzahl Abwesender der Klasse, der höhere Wert
+    v_req := greatest(
+      case when v_has_need and b = any (v_need.blocks) then v_need.need else 0 end,
+      (select count(*)::int from ph_absent
+        where day = v_day and class_id = p_to and (cardinality(blocks) = 0 or b = any (blocks))));
+    if v_req = 0 then v_other := v_other + 1; continue; end if;
 
     select count(*) into v_cnt from ph_flows
       where day = v_day and to_class = p_to and active and b = any (blocks);
     -- Vertretungen durch namentlich genannte Personen zählen ebenfalls
     select v_cnt + count(*) into v_cnt from ph_cover
       where day = v_day and to_class = p_to and active and b = any (blocks);
-    if v_cnt >= v_need.need then v_other := v_other + 1; continue; end if;
+    if v_cnt >= v_req then v_other := v_other + 1; continue; end if;
 
     if exists (select 1 from ph_flows
                where day = v_day and to_class = p_to and from_class = p_from
@@ -581,21 +595,26 @@ $fn$;
 
 -- Abwesende und Vertretungen (nur Schulleitung) ------------------------
 
-create or replace function public.ph_admin_add_absent(p_token text, p_name text, p_class text) returns jsonb
+-- Abwesenheit eintragen. Mit Klasse zählt jede Abwesenheit als 1 fehlende Person in dieser
+-- Klasse (für die gewählten Zeiträume, ohne Auswahl den ganzen Tag).
+drop function if exists public.ph_admin_add_absent(text, text, text);
+create or replace function public.ph_admin_add_absent(p_token text, p_name text, p_class text, p_blocks text[]) returns jsonb
 language plpgsql volatile security definer set search_path = public, extensions as
 $fn$
 declare
-  v_name  text := btrim(coalesce(p_name, ''));
-  v_class text := nullif(btrim(coalesce(p_class, '')), '');
-  v_id    bigint;
+  v_name   text := btrim(coalesce(p_name, ''));
+  v_class  text := nullif(btrim(coalesce(p_class, '')), '');
+  v_blocks text[] := ph_clean_blocks(p_blocks);
+  v_id     bigint;
 begin
   if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
   if char_length(v_name) not between 1 and 60
      or (v_class is not null and not ph_class_ok(v_class)) then
     return ph_fail('ungueltig');
   end if;
+  if cardinality(v_blocks) = cardinality(ph_blocks()) then v_blocks := '{}'; end if;  -- alle = ganzer Tag
   perform ph_cleanup();
-  insert into ph_absent (day, name, class_id) values (ph_today(), v_name, v_class) returning id into v_id;
+  insert into ph_absent (day, name, class_id, blocks) values (ph_today(), v_name, v_class, v_blocks) returning id into v_id;
   return jsonb_build_object('ok', true, 'id', v_id);
 end
 $fn$;
@@ -724,7 +743,7 @@ revoke all on function public.ph_admin_end_flow(text, bigint)             from p
 revoke all on function public.ph_admin_clear_need(text, text)             from public;
 revoke all on function public.ph_admin_set_block(text, int)               from public;
 revoke all on function public.ph_ping()                                   from public;
-revoke all on function public.ph_admin_add_absent(text, text, text)       from public;
+revoke all on function public.ph_admin_add_absent(text, text, text, text[]) from public;
 revoke all on function public.ph_admin_remove_absent(text, bigint)        from public;
 revoke all on function public.ph_admin_add_cover(text, text, text, text[]) from public;
 revoke all on function public.ph_admin_remove_cover(text, bigint)         from public;
@@ -741,7 +760,7 @@ grant execute on function public.ph_admin_end_flow(text, bigint)             to 
 grant execute on function public.ph_admin_clear_need(text, text)             to anon, authenticated;
 grant execute on function public.ph_admin_set_block(text, int)               to anon, authenticated;
 grant execute on function public.ph_ping()                                   to anon, authenticated;
-grant execute on function public.ph_admin_add_absent(text, text, text)        to anon, authenticated;
+grant execute on function public.ph_admin_add_absent(text, text, text, text[]) to anon, authenticated;
 grant execute on function public.ph_admin_remove_absent(text, bigint)         to anon, authenticated;
 grant execute on function public.ph_admin_add_cover(text, text, text, text[]) to anon, authenticated;
 grant execute on function public.ph_admin_remove_cover(text, bigint)          to anon, authenticated;
