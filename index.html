@@ -210,6 +210,8 @@
   .mx .mx-none{background:var(--bg);color:var(--ink-light);}
   .mx .mx-open{background:var(--amber-soft);color:#8A5A14;font-weight:700;}
   .mx .mx-ok{background:#E4F1EC;color:var(--teal-deep);font-weight:600;}
+  .mx .mx-ok.mx-cover{background:#E6ECF5;color:#2E4A6E;}
+  .mx .mx-cv{color:#2E4A6E;}
   .mx .mx-past{opacity:.4;}
   .mx .mx-click{cursor:pointer;}
   .mx .mx-click:hover{outline:2px solid var(--amber);}
@@ -237,7 +239,8 @@
   .dp-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:2vw;}
   .dp-matrix{min-height:0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2vh 1vw;}
   .dp-matrix .mx{height:100%;gap:.6vh .5vw;grid-template-columns:minmax(13em,1.7fr) repeat(4,minmax(0,1fr));}
-  .dp-matrix .mx-name small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dp-matrix .mx-name small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.74em;line-height:1.15;margin-top:.1em;}
+  .dp-matrix .mx > div{line-height:1.12;overflow:hidden;}
   .dp-matrix .mx > div{font-size:clamp(12px,1.25vw,26px);min-height:0;padding:.3vh .7vw;}
   .dp-matrix .mx .mx-h{font-size:clamp(12px,1.1vw,24px);}
   .dp-side{min-height:0;display:flex;flex-direction:column;gap:2vh;overflow:hidden;}
@@ -320,7 +323,7 @@ let currentUser = null; // {type:'class', classId} | {type:'admin'} | null
 let myClassId = null;
 let pendingSendBlocks = {};
 let adminForm = {from:'', to:'', blocks:[], mode:'class', name:''};
-let absentForm = {name:'', classId:''};
+let absentForm = {name:'', classId:'', blocks:[]};
 let absent = [];   // {id, name, class_id}
 let covers = [];   // {id, name, to, blocks, active}
 let staffSeq = 0;
@@ -410,10 +413,24 @@ function classNameOf(id){ const c = classes.find(x=>x.id===id); return c? c.name
 
 function isFutureBlock(b){ return DAY_BLOCKS.indexOf(b) >= curBlock(); }
 function futureBlocks(){ return DAY_BLOCKS.filter(isFutureBlock); }
-// Ein Bedarf gilt nur für die ausdrücklich gewählten Zeiträume
-function requiredBlocks(c){
+// Zeiträume einer Abwesenheit (leer = ganzer Tag)
+function absentBlocks(a){ return (a.blocks && a.blocks.length) ? a.blocks : DAY_BLOCKS; }
+function absentLabel(a){ return (a.blocks && a.blocks.length) ? blockLabel(a.blocks) : 'Ganzer Tag'; }
+function absentCount(classId, block){
+  return absent.filter(a=>a.class_id === classId && absentBlocks(a).includes(block)).length;
+}
+// Selbst gemeldeter Bedarf gilt nur für die ausdrücklich gewählten Zeiträume
+function reportedBlocks(c){
   if(c.need <= 0) return [];
   return DAY_BLOCKS.filter(b=>(c.needBlocks||[]).includes(b) && isFutureBlock(b));
+}
+// Bedarf in einem Zeitraum: gemeldete Zahl oder Anzahl Abwesender der Klasse, der höhere Wert
+function needAt(c, b){
+  const reported = (c.need > 0 && (c.needBlocks||[]).includes(b)) ? c.need : 0;
+  return Math.max(reported, absentCount(c.id, b));
+}
+function requiredBlocks(c){
+  return DAY_BLOCKS.filter(b=>isFutureBlock(b) && needAt(c, b) > 0);
 }
 function blockName(){
   const i = curBlock();
@@ -443,10 +460,10 @@ function liveCovers(){
     .filter(v=>v.blocks.length>0);
 }
 function openBlocksFor(c){
-  return requiredBlocks(c).filter(b=>coverCount(c.id,b) < c.need);
+  return requiredBlocks(c).filter(b=>coverCount(c.id,b) < needAt(c, b));
 }
 function needStatus(c){
-  if(c.need <= 0) return null;
+  if(requiredBlocks(c).length === 0) return null;
   return openBlocksFor(c).length===0 ? 'done' : 'open';
 }
 
@@ -659,12 +676,20 @@ function adminPickCell(classId, block){
   }
   render();
 }
+function toggleAbsentBlock(block){
+  const i = absentForm.blocks.indexOf(block);
+  if(i>=0) absentForm.blocks.splice(i,1); else absentForm.blocks.push(block);
+  render();
+}
 function adminAddAbsent(){
   const name = (absentForm.name||'').trim();
   if(!name){ toast('Bitte einen Namen eingeben.'); return; }
-  if(REMOTE) return remoteAddAbsent(name, absentForm.classId);
-  absent.push({id:++staffSeq, name, class_id:absentForm.classId||null});
-  absentForm.name = '';
+  // Ohne Auswahl oder mit allen Zeiträumen: ganzer Tag
+  let blocks = DAY_BLOCKS.filter(b=>absentForm.blocks.includes(b));
+  if(blocks.length === DAY_BLOCKS.length) blocks = [];
+  if(REMOTE) return remoteAddAbsent(name, absentForm.classId, blocks);
+  absent.push({id:++staffSeq, name, class_id:absentForm.classId||null, blocks});
+  absentForm.name = ''; absentForm.blocks = [];
   toast('Abwesenheit eingetragen');
   render();
 }
@@ -767,7 +792,7 @@ function applyRemote(d){
   const known = id => classes.some(c=>c.id === id);
   flows = (d.flows||[]).filter(f=>known(f.from_class) && known(f.to_class))
     .map(f=>({id:f.id, from:f.from_class, to:f.to_class, blocks:(f.blocks||[]).slice(), active:!!f.active, time:berlinTime(f.created_at)}));
-  absent = (d.absent||[]).map(a=>({id:a.id, name:String(a.name), class_id:a.class_id}));
+  absent = (d.absent||[]).map(a=>({id:a.id, name:String(a.name), class_id:a.class_id, blocks:Array.isArray(a.blocks) ? a.blocks.filter(b=>DAY_BLOCKS.includes(b)) : []}));
   covers = (d.cover||[]).filter(v=>known(v.to_class))
     .map(v=>({id:v.id, name:String(v.name), to:v.to_class, blocks:(v.blocks||[]).slice(), active:true}));
   serverBlockIndex = Math.max(0, Math.min(Number(d.block_index)||0, DAY_BLOCKS.length));
@@ -912,12 +937,12 @@ async function remoteAssign(){
   } finally { busy = false; }
   await refreshRemote();
 }
-async function remoteAddAbsent(name, classId){
+async function remoteAddAbsent(name, classId, blocks){
   if(busy) return;
   busy = true;
   try{
-    const res = await remoteCall('ph_admin_add_absent', {p_token:adminToken, p_name:name, p_class:classId||null});
-    if(res.ok){ absentForm.name = ''; toast('Abwesenheit eingetragen'); }
+    const res = await remoteCall('ph_admin_add_absent', {p_token:adminToken, p_name:name, p_class:classId||null, p_blocks:blocks});
+    if(res.ok){ absentForm.name = ''; absentForm.blocks = []; toast('Abwesenheit eingetragen'); }
   } finally { busy = false; }
   await refreshRemote();
 }
@@ -1115,8 +1140,10 @@ function renderClassApp(app){
   else if(!live) stateLine = draft.length
     ? `<div class="need-state">Noch nichts gemeldet. Mit + für ${blockLabel(draft)} melden.</div>`
     : '<div class="need-state">Noch nichts gemeldet.</div>';
-  else if(requiredBlocks(mine).length === 0) stateLine = '<div class="need-state">Die gemeldeten Zeiträume sind vorbei.</div>';
-  else stateLine = `<div class="need-state live">Gemeldet: ${mine.need} Erwachsene(r) für ${blockLabel(requiredBlocks(mine))}${myOpen.length ? ` · noch offen: ${myOpen.join(', ')}` : ' · alles gedeckt'}</div>`;
+  else if(reportedBlocks(mine).length === 0) stateLine = '<div class="need-state">Die gemeldeten Zeiträume sind vorbei.</div>';
+  else stateLine = `<div class="need-state live">Gemeldet: ${mine.need} Erwachsene(r) für ${blockLabel(reportedBlocks(mine))}${myOpen.length ? ` · noch offen: ${myOpen.join(', ')}` : ' · alles gedeckt'}</div>`;
+  const myAway = absent.filter(a=>a.class_id === mine.id && absentBlocks(a).some(isFutureBlock));
+  if(myAway.length) stateLine += `<div class="need-state">Von der Schulleitung als abwesend eingetragen: ${myAway.map(a=>`${esc(a.name)} (${absentLabel(a)})`).join(', ')}. Dafür ist automatisch Bedarf gemeldet.</div>`;
 
   app.innerHTML = `
     <header class="top">
@@ -1192,15 +1219,19 @@ function renderClassApp(app){
 // ---------- Matrix: Klassen x Zeiträume ----------
 function mxCellHTML(c, b, opts){
   const past = DAY_BLOCKS.indexOf(b) < curBlock();
-  const required = c.need > 0 && (c.needBlocks||[]).includes(b);
-  const names = coverNames(c.id, b);
+  const req = needAt(c, b);
+  const fromFlows = flows.filter(f=>f.active && f.to===c.id && f.blocks.includes(b)).map(f=>esc(classNameOf(f.from)));
+  const fromCovers = covers.filter(v=>v.active!==false && v.to===c.id && v.blocks.includes(b)).map(v=>`<span class="mx-cv">${esc(v.name)}</span>`);
+  const names = fromFlows.concat(fromCovers);
   const cnt = names.length;
+  const onlyCovers = cnt > 0 && fromFlows.length === 0;
   let cls = 'mx-none', txt = '–';
-  if(required){
-    if(cnt >= c.need){ cls = 'mx-ok'; txt = '✓ ' + names.map(esc).join(', '); }
-    else { cls = 'mx-open'; txt = `fehlt ${c.need - cnt}` + (cnt ? `<small>${names.map(esc).join(', ')}</small>` : ''); }
+  if(req > 0){
+    // Häkchen und Namen in einem Element, sonst stapelt die Zelle sie untereinander
+    if(cnt >= req){ cls = onlyCovers ? 'mx-ok mx-cover' : 'mx-ok'; txt = `<span>✓ ${names.join(', ')}</span>`; }
+    else { cls = 'mx-open'; txt = `fehlt ${req - cnt}` + (cnt ? `<small>${names.join(', ')}</small>` : ''); }
   } else if(cnt > 0){
-    cls = 'mx-ok'; txt = names.map(esc).join(', ');
+    cls = onlyCovers ? 'mx-ok mx-cover' : 'mx-ok'; txt = `<span>${names.join(', ')}</span>`;
   }
   if(past) cls += ' mx-past';
   let attr = '';
@@ -1216,7 +1247,7 @@ function matrixHTML(opts){
   const cur = curBlock();
   const head = `<div class="mx-h">Klasse</div>` + DAY_BLOCKS.map((b,i)=>`<div class="mx-h ${i===cur?'mx-now':''}">${b}</div>`).join('');
   const rows = classes.map(c=>{
-    const away = absent.filter(a=>a.class_id === c.id).map(a=>esc(a.name));
+    const away = absent.filter(a=>a.class_id === c.id).map(a=>esc(a.name) + (a.blocks && a.blocks.length ? ` (${a.blocks.map(x=>x.replace('. Block','.')).join(', ')})` : ''));
     const label = `<div class="mx-name">${esc(c.name)}${away.length ? `<small>abwesend: ${away.join(', ')}</small>` : ''}</div>`;
     return label + DAY_BLOCKS.map(b=>mxCellHTML(c, b, opts)).join('');
   }).join('');
@@ -1280,7 +1311,7 @@ function openNeedsCardHTML(){
       list.map(c=>`<div class="flow-row">
           <span class="flow-badge" style="background:var(--amber);color:#4A3200;">${esc(c.name)}</span>
           <span style="color:var(--ink-soft)">offen: ${openBlocksFor(c).join(', ')}</span>
-          <div class="flow-actions"><button class="danger-btn" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button></div>
+          <div class="flow-actions">${c.need > 0 ? `<button class="danger-btn" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button>` : `<span class="hint" style="margin:0">wegen Abwesenheit</span>`}</div>
         </div>`).join('')}
   </div>`;
 }
@@ -1317,6 +1348,7 @@ function absentCardHTML(){
       absent.map(a=>`<div class="person-row">
         <span>${esc(a.name)}</span>
         ${a.class_id ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(a.class_id))}</span>` : ''}
+        <span style="color:var(--ink-soft)">· ${absentLabel(a)}</span>
         <button class="danger-btn" style="margin-left:auto;" onclick="adminRemoveAbsent(${Number(a.id)})">Entfernen</button>
       </div>`).join('')}
     <label class="admin-label" for="absName">Neu eintragen</label>
@@ -1325,6 +1357,11 @@ function absentCardHTML(){
       <option value="">Klasse (optional)</option>
       ${classes.map(c=>`<option value="${c.id}" ${absentForm.classId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
     </select>
+    <label class="admin-label">Abwesend im Zeitraum</label>
+    <div class="block-row">
+      ${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${absentForm.blocks.includes(b)?'active':''}" aria-pressed="${absentForm.blocks.includes(b)}" onclick="toggleAbsentBlock('${b}')">${b}</button>`).join('')}
+    </div>
+    <div class="hint">Ohne Auswahl: ganzer Tag. Kommt später: die frühen Zeiträume wählen. Mit Klasse fehlt dort automatisch 1 Person.</div>
     <button class="help-btn" onclick="adminAddAbsent()">Eintragen</button>
   </div>`;
 }
@@ -1427,7 +1464,7 @@ function renderDisplay(app){
           <div class="card">
             <h2>Abwesend</h2>
             ${absent.length===0 ? `<div class="empty">Niemand gemeldet.</div>` :
-              absent.map(a=>`<div class="person-row"><span>${esc(a.name)}</span>${a.class_id ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(a.class_id))}</span>` : ''}</div>`).join('')}
+              absent.map(a=>`<div class="person-row"><span>${esc(a.name)}</span>${a.class_id ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(a.class_id))}</span>` : ''}<span style="color:var(--ink-soft)">· ${absentLabel(a)}</span></div>`).join('')}
           </div>
           <div class="card">
             <h2>Vertretung</h2>

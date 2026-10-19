@@ -11,7 +11,8 @@ Läuft als statische Seite über GitHub Pages und lässt sich auf dem Handy als 
 - Die Zeiträume wechseln automatisch nach Uhrzeit (10:30, 11:45, 12:45, 14:25). Die Schulleitung kann manuell vor- oder zurückschalten; das gilt bis zur nächsten Uhrzeit.
 - Die Schulübersicht zeigt alle Klassen auf einen Blick, die Schulleitung hat zusätzlich eine Master-Ansicht (Bedarfe schließen, Personal von Klasse zu Klasse zuweisen, Einsätze beenden).
 - Schulleitung am PC: Matrix aus Klassen und Zeiträumen. Die Ansicht schaltet nach Bildschirmbreite automatisch zwischen Desktop und Mobil (ab 900 px Breite Desktop), der Umschalter Auto / Mobil / Desktop erzwingt eine der beiden. Ein Feld der Matrix anklicken wählt es unter "Zuweisen" vor.
-- Schulleitung trägt Abwesende ein und kann Vertretungen eintragen ("Frau X vertritt in Klasse A", ganzer Tag oder einzelne Zeiträume). Eine Vertretung zählt wie ein Einsatz und deckt den Bedarf der Klasse.
+- Schulleitung trägt Abwesende ein, für den ganzen Tag oder einzelne Zeiträume ("nur 3. Block", "kommt später" = die frühen Zeiträume). Ist eine Klasse angegeben, fehlt dort automatisch 1 Person pro Abwesendem; meldet die Klasse selbst mehr Bedarf, gilt der höhere Wert.
+- Schulleitung kann Vertretungen eintragen ("Frau X vertritt in Klasse A", ganzer Tag oder einzelne Zeiträume). Eine Vertretung zählt wie ein Einsatz und deckt den Bedarf der Klasse. In der Matrix sind Vertretungen blau-grau, Hilfe aus einer anderen Klasse grün.
 - Aula-Anzeige: eigene Seite für einen großen Bildschirm, nur lesend, aktualisiert sich selbst (siehe unten).
 - Die gewählte Klasse wird auf dem Gerät gemerkt. "Neu wählen" für Vertretungstage.
 - Es werden keine Namen von Kindern gespeichert. Namen von Mitarbeitenden stehen nur in der Abwesenheits- und Vertretungsliste, die die Schulleitung pflegt. Gespeichert wird nur der heutige Tag.
