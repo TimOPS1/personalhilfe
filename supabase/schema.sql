@@ -18,8 +18,10 @@
 --   * Der Live-Abgleich sendet nur ein inhaltsloses Signal "es hat sich etwas
 --     geändert"; die Daten selbst holt jedes Handy mit dem Schulcode ab.
 --   * Gespeichert wird nur der heutige Tag; ältere Tage werden automatisch gelöscht.
---   * Es werden nur Klassen-Kennungen, Zeiträume und Zahlen gespeichert,
---     keine Namen von Kindern oder Mitarbeitenden.
+--   * Es werden nur Klassen-Kennungen, Zeiträume und Zahlen gespeichert, keine Namen
+--     von Kindern. Einzige Ausnahme: die Schulleitung kann Abwesende und Vertretungen
+--     mit Namen eintragen (ph_absent, ph_cover). Auch diese Tabellen sind von außen
+--     nicht lesbar, gelesen wird nur mit Schulcode, und sie gelten nur für den heutigen Tag.
 -- =====================================================================
 
 create extension if not exists pgcrypto with schema extensions;
@@ -68,6 +70,28 @@ create table if not exists public.ph_attempts (
   first_fail timestamptz not null default now()
 );
 
+-- Abwesende (nur Schulleitung trägt ein) und Vertretungen ("X vertritt in Klasse Y").
+-- Namen sind freier Text, die Schulleitung entscheidet, was dort steht.
+create table if not exists public.ph_absent (
+  id         bigint generated always as identity primary key,
+  day        date        not null,
+  name       text        not null check (char_length(name) between 1 and 60),
+  class_id   text        check (class_id is null or char_length(class_id) between 1 and 40),
+  created_at timestamptz not null default now()
+);
+create index if not exists ph_absent_day_idx on public.ph_absent (day);
+
+create table if not exists public.ph_cover (
+  id         bigint generated always as identity primary key,
+  day        date        not null,
+  name       text        not null check (char_length(name) between 1 and 60),
+  to_class   text        not null check (char_length(to_class) between 1 and 40),
+  blocks     text[]      not null check (cardinality(blocks) > 0),
+  active     boolean     not null default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists ph_cover_day_idx on public.ph_cover (day);
+
 -- 2) Zugriffsschutz: keine direkten Lese- oder Schreibrechte von außen ----
 
 alter table public.ph_needs    enable row level security;
@@ -76,6 +100,8 @@ alter table public.ph_day      enable row level security;
 alter table public.ph_secrets  enable row level security;
 alter table public.ph_sessions enable row level security;
 alter table public.ph_attempts enable row level security;
+alter table public.ph_absent   enable row level security;
+alter table public.ph_cover    enable row level security;
 
 -- Frühere Fassungen erlaubten allen das Lesen. Das wird hier zurückgenommen.
 drop policy if exists ph_read_needs on public.ph_needs;
@@ -83,7 +109,8 @@ drop policy if exists ph_read_flows on public.ph_flows;
 drop policy if exists ph_read_day   on public.ph_day;
 
 revoke all on public.ph_needs, public.ph_flows, public.ph_day,
-              public.ph_secrets, public.ph_sessions, public.ph_attempts
+              public.ph_secrets, public.ph_sessions, public.ph_attempts,
+              public.ph_absent, public.ph_cover
   from anon, authenticated;
 
 -- Frühere Fassungen haben die Tabellen selbst live verteilt (mit Inhalt). Abschalten.
@@ -244,6 +271,8 @@ begin
   if exists (select 1 from ph_needs where day < v_day) then delete from ph_needs where day < v_day; end if;
   if exists (select 1 from ph_flows where day < v_day) then delete from ph_flows where day < v_day; end if;
   if exists (select 1 from ph_day   where day < v_day) then delete from ph_day   where day < v_day; end if;
+  if exists (select 1 from ph_absent where day < v_day) then delete from ph_absent where day < v_day; end if;
+  if exists (select 1 from ph_cover  where day < v_day) then delete from ph_cover  where day < v_day; end if;
   if exists (select 1 from ph_sessions where expires_at < now()) then
     delete from ph_sessions where expires_at < now();
   end if;
@@ -275,6 +304,12 @@ create trigger ph_needs_notify after insert or update or delete on public.ph_nee
 create trigger ph_flows_notify after insert or update or delete on public.ph_flows
   for each row execute function public.ph_notify();
 create trigger ph_day_notify   after insert or update or delete on public.ph_day
+  for each row execute function public.ph_notify();
+drop trigger if exists ph_absent_notify on public.ph_absent;
+drop trigger if exists ph_cover_notify  on public.ph_cover;
+create trigger ph_absent_notify after insert or update or delete on public.ph_absent
+  for each row execute function public.ph_notify();
+create trigger ph_cover_notify  after insert or update or delete on public.ph_cover
   for each row execute function public.ph_notify();
 
 -- 4) Öffentliche Funktionen (alle geben jsonb zurück: {ok:true,...} oder {ok:false,error:...})
@@ -312,7 +347,13 @@ begin
     'flows', coalesce((select jsonb_agg(jsonb_build_object(
                 'id', id, 'from_class', from_class, 'to_class', to_class,
                 'blocks', to_jsonb(blocks), 'active', active, 'created_at', created_at) order by id)
-              from ph_flows where day = v_day), '[]'::jsonb)
+              from ph_flows where day = v_day), '[]'::jsonb),
+    'absent', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', id, 'name', name, 'class_id', class_id) order by id)
+              from ph_absent where day = v_day), '[]'::jsonb),
+    'cover', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', id, 'name', name, 'to_class', to_class, 'blocks', to_jsonb(blocks)) order by id)
+              from ph_cover where day = v_day and active), '[]'::jsonb)
   );
 end
 $fn$;
@@ -422,6 +463,9 @@ begin
     if not (b = any (v_need.blocks)) then v_other := v_other + 1; continue; end if;
 
     select count(*) into v_cnt from ph_flows
+      where day = v_day and to_class = p_to and active and b = any (blocks);
+    -- Vertretungen durch namentlich genannte Personen zählen ebenfalls
+    select v_cnt + count(*) into v_cnt from ph_cover
       where day = v_day and to_class = p_to and active and b = any (blocks);
     if v_cnt >= v_need.need then v_other := v_other + 1; continue; end if;
 
@@ -535,6 +579,84 @@ begin
 end
 $fn$;
 
+-- Abwesende und Vertretungen (nur Schulleitung) ------------------------
+
+create or replace function public.ph_admin_add_absent(p_token text, p_name text, p_class text) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+declare
+  v_name  text := btrim(coalesce(p_name, ''));
+  v_class text := nullif(btrim(coalesce(p_class, '')), '');
+  v_id    bigint;
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  if char_length(v_name) not between 1 and 60
+     or (v_class is not null and not ph_class_ok(v_class)) then
+    return ph_fail('ungueltig');
+  end if;
+  perform ph_cleanup();
+  insert into ph_absent (day, name, class_id) values (ph_today(), v_name, v_class) returning id into v_id;
+  return jsonb_build_object('ok', true, 'id', v_id);
+end
+$fn$;
+
+create or replace function public.ph_admin_remove_absent(p_token text, p_id bigint) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  delete from ph_absent where id = p_id and day = ph_today();
+  if not found then return ph_fail('nicht_gefunden'); end if;
+  return jsonb_build_object('ok', true);
+end
+$fn$;
+
+-- Vertretung eintragen: eine namentlich genannte Person übernimmt eine Klasse.
+-- Ohne Zeitraum gilt der ganze (restliche) Tag. Sie zählt wie ein Einsatz einer anderen Klasse.
+create or replace function public.ph_admin_add_cover(
+  p_token text, p_name text, p_to text, p_blocks text[]
+) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+declare
+  v_name    text := btrim(coalesce(p_name, ''));
+  v_current int;
+  v_clean   text[];
+  v_blocks  text[];
+  v_id      bigint;
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  if char_length(v_name) not between 1 and 60 or not ph_class_ok(p_to) then
+    return ph_fail('ungueltig');
+  end if;
+
+  v_clean := ph_clean_blocks(p_blocks);
+  if cardinality(v_clean) = 0 then v_clean := ph_blocks(); end if;
+
+  v_current := ph_current_block();
+  select coalesce(array_agg(b order by array_position(ph_blocks(), b)), '{}'::text[])
+    into v_blocks
+    from unnest(v_clean) as b
+    where array_position(ph_blocks(), b) - 1 >= v_current;
+  if cardinality(v_blocks) = 0 then return ph_fail('vergangen'); end if;
+
+  perform ph_cleanup();
+  insert into ph_cover (day, name, to_class, blocks) values (ph_today(), v_name, p_to, v_blocks) returning id into v_id;
+  return jsonb_build_object('ok', true, 'id', v_id, 'blocks', to_jsonb(v_blocks));
+end
+$fn$;
+
+create or replace function public.ph_admin_remove_cover(p_token text, p_id bigint) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  delete from ph_cover where id = p_id and day = ph_today();
+  if not found then return ph_fail('nicht_gefunden'); end if;
+  return jsonb_build_object('ok', true);
+end
+$fn$;
+
 -- 6) Lebenszeichen für die GitHub Action, damit das Gratis-Projekt nicht pausiert.
 -- Gibt keine Daten heraus, räumt nur Altes auf.
 create or replace function public.ph_ping() returns jsonb
@@ -602,6 +724,10 @@ revoke all on function public.ph_admin_end_flow(text, bigint)             from p
 revoke all on function public.ph_admin_clear_need(text, text)             from public;
 revoke all on function public.ph_admin_set_block(text, int)               from public;
 revoke all on function public.ph_ping()                                   from public;
+revoke all on function public.ph_admin_add_absent(text, text, text)       from public;
+revoke all on function public.ph_admin_remove_absent(text, bigint)        from public;
+revoke all on function public.ph_admin_add_cover(text, text, text, text[]) from public;
+revoke all on function public.ph_admin_remove_cover(text, bigint)         from public;
 
 grant execute on function public.ph_login_code(text)                         to anon, authenticated;
 grant execute on function public.ph_fetch_day(text)                          to anon, authenticated;
@@ -615,3 +741,7 @@ grant execute on function public.ph_admin_end_flow(text, bigint)             to 
 grant execute on function public.ph_admin_clear_need(text, text)             to anon, authenticated;
 grant execute on function public.ph_admin_set_block(text, int)               to anon, authenticated;
 grant execute on function public.ph_ping()                                   to anon, authenticated;
+grant execute on function public.ph_admin_add_absent(text, text, text)        to anon, authenticated;
+grant execute on function public.ph_admin_remove_absent(text, bigint)         to anon, authenticated;
+grant execute on function public.ph_admin_add_cover(text, text, text, text[]) to anon, authenticated;
+grant execute on function public.ph_admin_remove_cover(text, bigint)          to anon, authenticated;

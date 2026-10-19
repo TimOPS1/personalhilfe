@@ -10,8 +10,11 @@ Läuft als statische Seite über GitHub Pages und lässt sich auf dem Handy als 
 - Bei Bedarf von mehreren Personen bleibt der Zeitraum offen, bis genug zugesagt haben.
 - Die Zeiträume wechseln automatisch nach Uhrzeit (10:30, 11:45, 12:45, 14:25). Die Schulleitung kann manuell vor- oder zurückschalten; das gilt bis zur nächsten Uhrzeit.
 - Die Schulübersicht zeigt alle Klassen auf einen Blick, die Schulleitung hat zusätzlich eine Master-Ansicht (Bedarfe schließen, Personal von Klasse zu Klasse zuweisen, Einsätze beenden).
+- Schulleitung am PC: Matrix aus Klassen und Zeiträumen. Die Ansicht schaltet nach Bildschirmbreite automatisch zwischen Desktop und Mobil (ab 900 px Breite Desktop), der Umschalter Auto / Mobil / Desktop erzwingt eine der beiden. Ein Feld der Matrix anklicken wählt es unter "Zuweisen" vor.
+- Schulleitung trägt Abwesende ein und kann Vertretungen eintragen ("Frau X vertritt in Klasse A", ganzer Tag oder einzelne Zeiträume). Eine Vertretung zählt wie ein Einsatz und deckt den Bedarf der Klasse.
+- Aula-Anzeige: eigene Seite für einen großen Bildschirm, nur lesend, aktualisiert sich selbst (siehe unten).
 - Die gewählte Klasse wird auf dem Gerät gemerkt. "Neu wählen" für Vertretungstage.
-- Es werden keine Namen von Kindern oder Mitarbeitenden gespeichert, nur Klassen und Zeiträume. Gespeichert wird nur der heutige Tag.
+- Es werden keine Namen von Kindern gespeichert. Namen von Mitarbeitenden stehen nur in der Abwesenheits- und Vertretungsliste, die die Schulleitung pflegt. Gespeichert wird nur der heutige Tag.
 
 ## Anpassen (ohne Programmieren)
 
@@ -51,6 +54,18 @@ Auf GitHub: Datei öffnen, Stift-Symbol, ändern, "Commit changes". Nach ca. ein
 - Das kostenlose Supabase-Projekt pausiert nach einer Woche ohne Aktivität. Die GitHub Action "Supabase wach halten" ruft es alle 3 Tage auf. GitHub schaltet solche geplanten Abläufe ab, wenn 60 Tage lang nichts am Repo geändert wurde; dann unter "Actions" wieder aktivieren. Notfalls lässt sich das Projekt im Supabase-Dashboard neu starten.
 - Web Push für Benachrichtigungen ist noch nicht eingebaut.
 - Vor echtem Einsatz Datenschutz der Schule klären.
+
+## Aula-Anzeige
+
+Die Seite `…/index.html#anzeige` zeigt im Vollbild die Matrix, die Abwesenden und die Vertretungen. Sie hat keine Knöpfe und aktualisiert sich selbst.
+
+- Mit `#anzeige=SCHULCODE` im Link braucht der Bildschirm keine Eingabe. In der Schulleitungs-Ansicht erzeugt der Knopf "Link für Anzeige kopieren" diesen Link. Er enthält den Schulcode und sollte nur dort eingetragen werden, wo ihn die Schulleitung verwaltet (z. B. in den Einstellungen einer IServ-Infoanzeige).
+- Namen von Abwesenden und Vertretungen liegen in Tabellen, die von außen nicht lesbar sind. Sie kommen nur mit Schulcode aus der Datenbank und werden, wie alles andere, nach dem Tag gelöscht.
+- Ob eine IServ-Infoanzeige eine fremde Webseite einbinden kann, muss in IServ geprüft werden. Sonst den Aula-PC im Vollbild-Browser auf den Link stellen.
+
+## Update einer bestehenden Datenbank
+
+Nach Änderungen an `supabase/schema.sql` die Datei im SQL Editor einfach erneut ausführen. Sie ist wiederholbar und lässt die Passwörter unberührt.
 
 ## Technik
 

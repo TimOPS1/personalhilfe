@@ -189,6 +189,62 @@
     box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:85vw;text-align:center;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---- Desktop-Ansicht (Schulleitung) und Matrix ---- */
+  body.desk .app{max-width:1500px;padding:20px 28px 60px;}
+  .adm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;}
+  .adm-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .adm-tools .block-progress{margin-top:0;}
+  .adm-tools-m{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);}
+  .seg button{border:none;background:transparent;padding:0 12px;min-height:44px;font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  a.switch-btn{text-decoration:none;display:inline-flex;align-items:center;}
+  .desk-grid{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;align-items:start;margin-top:14px;}
+  .mx{display:grid;grid-template-columns:minmax(8.5em,1.1fr) repeat(4,minmax(0,1fr));gap:6px;}
+  .mx > div{border-radius:10px;padding:7px 10px;min-height:2.7em;display:flex;flex-direction:column;justify-content:center;font-size:13.5px;line-height:1.25;overflow-wrap:anywhere;}
+  .mx .mx-h{font-size:12.5px;font-weight:700;color:var(--ink-soft);background:transparent;justify-content:flex-end;border-radius:0;}
+  .mx .mx-h.mx-now{color:var(--teal-deep);border-bottom:3px solid var(--teal);}
+  .mx .mx-name{font-weight:700;background:var(--bg);}
+  .mx .mx-name small{font-weight:500;color:var(--ink-soft);font-size:.85em;}
+  .mx .mx-none{background:var(--bg);color:var(--ink-light);}
+  .mx .mx-open{background:var(--amber-soft);color:#8A5A14;font-weight:700;}
+  .mx .mx-ok{background:#E4F1EC;color:var(--teal-deep);font-weight:600;}
+  .mx .mx-past{opacity:.4;}
+  .mx .mx-click{cursor:pointer;}
+  .mx .mx-click:hover{outline:2px solid var(--amber);}
+  .mx .mx-sel{outline:2px solid var(--teal);}
+  .mx small{display:block;font-weight:500;font-size:.85em;}
+  .mode-row{display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+  .text-input{width:100%;padding:0 10px;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:16px;color:var(--ink);margin-top:6px;font-family:inherit;}
+  .hint{font-size:12.5px;color:var(--ink-soft);margin-top:8px;line-height:1.35;}
+  .person-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px;flex-wrap:wrap;}
+  .person-row:last-child{border-bottom:none;}
+
+  /* ---- Anzeige für den Bildschirm in der Aula (#anzeige) ---- */
+  body.display{overflow:hidden;cursor:none;}
+  body.display .app{max-width:none;margin:0;padding:2.2vh 2.4vw;height:100vh;}
+  .dp{display:flex;flex-direction:column;height:100%;gap:2vh;}
+  .dp-head{display:flex;justify-content:space-between;align-items:flex-end;gap:2vw;}
+  .dp-date{font-size:clamp(14px,1.5vw,32px);color:var(--ink-soft);}
+  .dp-title{font-size:clamp(24px,3vw,64px);font-weight:700;color:#4B5C52;line-height:1.1;letter-spacing:-0.01em;}
+  .dp-right{display:flex;align-items:center;gap:1.4vw;}
+  .dp-block{font-size:clamp(14px,1.6vw,34px);font-weight:700;color:var(--teal-deep);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.6vh 1.2vw;}
+  .dp-stat{font-size:clamp(12px,1.2vw,26px);font-weight:600;color:var(--ink-soft);border-radius:14px;padding:.6vh 1.2vw;text-align:center;}
+  .dp-stat b{display:block;font-size:1.6em;color:var(--ink);line-height:1.1;}
+  .dp-stat.need{background:var(--amber-soft);} .dp-stat.flat{background:var(--card);border:1px solid var(--line);}
+  .dp-stand{font-size:clamp(11px,.9vw,20px);color:var(--ink-light);text-align:right;}
+  .dp-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:2vw;}
+  .dp-matrix{min-height:0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2vh 1vw;}
+  .dp-matrix .mx{height:100%;gap:.6vh .5vw;grid-template-columns:minmax(13em,1.7fr) repeat(4,minmax(0,1fr));}
+  .dp-matrix .mx-name small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dp-matrix .mx > div{font-size:clamp(12px,1.25vw,26px);min-height:0;padding:.3vh .7vw;}
+  .dp-matrix .mx .mx-h{font-size:clamp(12px,1.1vw,24px);}
+  .dp-side{min-height:0;display:flex;flex-direction:column;gap:2vh;overflow:hidden;}
+  .dp-side .card{margin:0;overflow:hidden;font-size:clamp(13px,1.2vw,26px);}
+  .dp-side h2{font-size:1em;margin-bottom:.8vh;}
+  .dp-side .person-row{font-size:1em;padding:.7vh 0;}
+  .dp-offline{position:fixed;left:50%;bottom:2vh;transform:translateX(-50%);background:var(--danger);color:#fff;padding:1vh 2vw;border-radius:12px;font-size:clamp(14px,1.4vw,28px);}
 </style>
 </head>
 <body>
@@ -263,7 +319,15 @@ let flowIdSeq = flows.length;
 let currentUser = null; // {type:'class', classId} | {type:'admin'} | null
 let myClassId = null;
 let pendingSendBlocks = {};
-let adminForm = {from:'', to:'', blocks:[]};
+let adminForm = {from:'', to:'', blocks:[], mode:'class', name:''};
+let absentForm = {name:'', classId:''};
+let absent = [];   // {id, name, class_id}
+let covers = [];   // {id, name, to, blocks, active}
+let staffSeq = 0;
+let lastRefresh = '';
+let lastDesktop = null;
+const VIEW_KEY = 'personalhilfe.view';
+const DISPLAY = (typeof location !== 'undefined') && /^#anzeige/i.test(location.hash || '');
 let remoteCode = '';
 let adminToken = '';
 let remoteLoaded = false;
@@ -319,7 +383,7 @@ function saveState(){
     localStorage.setItem(STATE_KEY, JSON.stringify({
       day: todayKey(),
       classes: classes.map(c=>({id:c.id, need:c.need, needBlocks:c.needBlocks})),
-      flows, flowIdSeq, manualBlock
+      flows, flowIdSeq, manualBlock, absent, covers, staffSeq
     }));
   }catch(e){}
 }
@@ -336,6 +400,9 @@ function loadState(){
     flows = (st.flows||[]).filter(f=>classes.some(c=>c.id===f.from) && classes.some(c=>c.id===f.to));
     flowIdSeq = st.flowIdSeq || flows.length;
     manualBlock = st.manualBlock || null;
+    absent = Array.isArray(st.absent) ? st.absent : [];
+    covers = (Array.isArray(st.covers) ? st.covers : []).filter(v=>classes.some(c=>c.id===v.to));
+    staffSeq = st.staffSeq || 0;
   }catch(e){}
 }
 
@@ -362,8 +429,18 @@ function blockLabel(arr){
   if(arr.length === DAY_BLOCKS.length) return 'Ganzer Tag';
   return DAY_BLOCKS.filter(b=>arr.includes(b)).join(', ');
 }
-function coverCount(classId, block){
-  return flows.filter(f=>f.active && f.to===classId && f.blocks.includes(block)).length;
+// Wer deckt diesen Zeitraum in dieser Klasse ab? (Einsätze anderer Klassen und namentliche Vertretungen)
+function coverNames(classId, block){
+  const fromFlows = flows.filter(f=>f.active && f.to===classId && f.blocks.includes(block)).map(f=>classNameOf(f.from));
+  const fromCovers = covers.filter(v=>v.active!==false && v.to===classId && v.blocks.includes(block)).map(v=>v.name);
+  return fromFlows.concat(fromCovers);
+}
+function coverCount(classId, block){ return coverNames(classId, block).length; }
+// Vertretungen ohne bereits vergangene Zeiträume
+function liveCovers(){
+  return covers.filter(v=>v.active!==false)
+    .map(v=>Object.assign({}, v, {blocks: v.blocks.filter(isFutureBlock)}))
+    .filter(v=>v.blocks.length>0);
 }
 function openBlocksFor(c){
   return requiredBlocks(c).filter(b=>coverCount(c.id,b) < c.need);
@@ -435,11 +512,17 @@ async function switchUser(){
 }
 async function initApp(){
   document.addEventListener('focusout', ()=>{
-    if(renderDeferred){ renderDeferred = false; setTimeout(render, 0); }
+    if(!renderDeferred) return;
+    // kurz warten: wer gerade vom Eingabefeld auf einen Knopf klickt, soll den Knopf noch treffen
+    setTimeout(()=>{
+      const a = document.activeElement;
+      if(a && (a.tagName === 'SELECT' || a.tagName === 'INPUT')) return;
+      if(renderDeferred){ renderDeferred = false; render(); }
+    }, 350);
   });
   if(!REMOTE) loadState();
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = DISPLAY ? null : localStorage.getItem(STORAGE_KEY);
     if(raw){
       const u = JSON.parse(raw);
       if(u.type==='admin' || (u.type==='class' && classes.some(c=>c.id===u.classId))){
@@ -450,6 +533,11 @@ async function initApp(){
   }catch(e){ /* noch keine Auswahl gespeichert */ }
   if(REMOTE){
     try{ remoteCode = localStorage.getItem(CODE_KEY) || ''; adminToken = localStorage.getItem(TOKEN_KEY) || ''; }catch(e){}
+    if(DISPLAY){
+      // Anzeige: Schulcode darf im Link stehen (#anzeige=CODE), damit der Bildschirm nichts eintippen muss
+      const m = /^#anzeige=(.+)$/i.exec(location.hash || '');
+      if(m){ try{ remoteCode = decodeURIComponent(m[1]); }catch(e){ remoteCode = m[1]; } }
+    }
     if(currentUser && currentUser.type==='admin' && !adminToken) currentUser = null;
     render();
     if(remoteCode) await startRemote();
@@ -560,7 +648,55 @@ function toggleAdminBlock(block){
   if(i>=0) adminForm.blocks.splice(i,1); else adminForm.blocks.push(block);
   render();
 }
+function setAdminMode(mode){ adminForm.mode = mode; render(); }
+// Feld der Matrix anklicken: Zielklasse und Zeitraum im Formular vorwählen
+function adminPickCell(classId, block){
+  if(!isFutureBlock(block)) return;
+  if(adminForm.to !== classId){ adminForm.to = classId; adminForm.blocks = [block]; }
+  else {
+    const i = adminForm.blocks.indexOf(block);
+    if(i>=0) adminForm.blocks.splice(i,1); else adminForm.blocks.push(block);
+  }
+  render();
+}
+function adminAddAbsent(){
+  const name = (absentForm.name||'').trim();
+  if(!name){ toast('Bitte einen Namen eingeben.'); return; }
+  if(REMOTE) return remoteAddAbsent(name, absentForm.classId);
+  absent.push({id:++staffSeq, name, class_id:absentForm.classId||null});
+  absentForm.name = '';
+  toast('Abwesenheit eingetragen');
+  render();
+}
+function adminRemoveAbsent(id){
+  if(REMOTE) return remoteRemoveAbsent(id);
+  absent = absent.filter(a=>a.id!==id);
+  toast('Eintrag entfernt');
+  render();
+}
+function adminRemoveCover(id){
+  const v = covers.find(x=>x.id===id);
+  if(v && !confirm(`Vertretung ${v.name} → ${classNameOf(v.to)} beenden?`)) return;
+  if(REMOTE) return remoteRemoveCover(id);
+  covers = covers.filter(x=>x.id!==id);
+  toast('Vertretung beendet');
+  render();
+}
+// Vertretung eintragen. Ohne gewählten Zeitraum gilt der ganze restliche Tag.
+function adminAddCover(){
+  const name = (adminForm.name||'').trim();
+  if(!name || !adminForm.to){ toast('Bitte Namen und Klasse angeben.'); return; }
+  const picked = DAY_BLOCKS.filter(b=>adminForm.blocks.includes(b));
+  const blocks = (picked.length ? picked : DAY_BLOCKS.slice()).filter(isFutureBlock);
+  if(blocks.length===0){ toast('Dieser Zeitraum ist schon vorbei.'); return; }
+  if(REMOTE) return remoteAddCover(name, adminForm.to, picked);
+  covers.push({id:++staffSeq, name, to:adminForm.to, blocks, active:true});
+  toast(`${name} vertritt in ${classNameOf(adminForm.to)}`);
+  adminForm.name = ''; adminForm.blocks = [];
+  render();
+}
 function adminAssign(){
+  if(adminForm.mode === 'cover') return adminAddCover();
   adminForm.blocks = adminForm.blocks.filter(isFutureBlock);
   if(!adminForm.from || !adminForm.to || adminForm.from===adminForm.to || adminForm.blocks.length===0){
     toast('Bitte Von-Klasse, Zu-Klasse und mindestens einen Zeitraum wählen.'); render(); return;
@@ -631,6 +767,9 @@ function applyRemote(d){
   const known = id => classes.some(c=>c.id === id);
   flows = (d.flows||[]).filter(f=>known(f.from_class) && known(f.to_class))
     .map(f=>({id:f.id, from:f.from_class, to:f.to_class, blocks:(f.blocks||[]).slice(), active:!!f.active, time:berlinTime(f.created_at)}));
+  absent = (d.absent||[]).map(a=>({id:a.id, name:String(a.name), class_id:a.class_id}));
+  covers = (d.cover||[]).filter(v=>known(v.to_class))
+    .map(v=>({id:v.id, name:String(v.name), to:v.to_class, blocks:(v.blocks||[]).slice(), active:true}));
   serverBlockIndex = Math.max(0, Math.min(Number(d.block_index)||0, DAY_BLOCKS.length));
   if(Array.isArray(d.block_ends)) blockEnds = d.block_ends.slice();
   scheduleBoundary();
@@ -659,6 +798,7 @@ async function refreshRemote(){
     if(res && res.ok){
       applyRemote(res);
       remoteLoaded = true; remoteFailed = false; connectionOk = true;
+      lastRefresh = now();
     } else if(res && (res.error === 'code' || res.error === 'gesperrt')){
       if(!remoteLoaded) remoteFailed = true;
       handleRemoteFail(res);
@@ -678,7 +818,7 @@ async function startRemote(){
   BACKEND.subscribe(()=>scheduleRefresh(150));
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) scheduleRefresh(0); });
   window.addEventListener('online', ()=>scheduleRefresh(0));
-  setInterval(()=>scheduleRefresh(0), 60000);
+  setInterval(()=>scheduleRefresh(0), DISPLAY ? 30000 : 60000);
   await refreshRemote();
 }
 async function submitCode(){
@@ -772,6 +912,42 @@ async function remoteAssign(){
   } finally { busy = false; }
   await refreshRemote();
 }
+async function remoteAddAbsent(name, classId){
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_add_absent', {p_token:adminToken, p_name:name, p_class:classId||null});
+    if(res.ok){ absentForm.name = ''; toast('Abwesenheit eingetragen'); }
+  } finally { busy = false; }
+  await refreshRemote();
+}
+async function remoteRemoveAbsent(id){
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_remove_absent', {p_token:adminToken, p_id:id});
+    if(res.ok) toast('Eintrag entfernt');
+  } finally { busy = false; }
+  await refreshRemote();
+}
+async function remoteAddCover(name, to, blocks){
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_add_cover', {p_token:adminToken, p_name:name, p_to:to, p_blocks:blocks});
+    if(res.ok){ adminForm.name = ''; adminForm.blocks = []; toast(`${name} vertritt in ${classNameOf(to)}`); }
+  } finally { busy = false; }
+  await refreshRemote();
+}
+async function remoteRemoveCover(id){
+  if(busy) return;
+  busy = true;
+  try{
+    const res = await remoteCall('ph_admin_remove_cover', {p_token:adminToken, p_id:id});
+    if(res.ok) toast('Vertretung beendet');
+  } finally { busy = false; }
+  await refreshRemote();
+}
 async function remoteClear(classId){
   if(busy) return;
   busy = true;
@@ -808,13 +984,24 @@ function renderLoading(app){
 }
 
 // ---------- Rendering ----------
+function setBodyMode(mode){
+  if(typeof document === 'undefined' || !document.body || !document.body.classList) return;
+  document.body.classList.toggle('desk', mode === 'desk');
+  document.body.classList.toggle('display', mode === 'display');
+}
 function render(){
   saveState();
   const app = document.getElementById('app');
+  setBodyMode(DISPLAY ? 'display' : null);
+  if(DISPLAY && !REMOTE){
+    app.innerHTML = `<header class="top"><div class="eyebrow">Personalhilfe</div><h1>Anzeige</h1></header><div class="card"><div class="empty">Die Anzeige braucht den gemeinsamen Betrieb mit Supabase.</div></div>`;
+    return;
+  }
   if(REMOTE){
     if(!remoteCode){ renderCodeGate(app); return; }
     if(!remoteLoaded){ renderLoading(app); return; }
   }
+  if(DISPLAY){ renderDisplay(app); return; }
   if(!currentUser){ renderLogin(app); return; }
   if(currentUser.type==='admin'){ renderAdmin(app); return; }
   renderClassApp(app);
@@ -866,9 +1053,18 @@ function overviewCard(highlightMine){
     </div>`;
 }
 
-function flowList(canEnd){
+// coverMode: 'admin' = Vertretungen mit Namen und Beenden-Knopf, 'anon' = ohne Namen, sonst keine
+function flowList(canEnd, coverMode){
   const activeFlows = liveFlows();
-  if(activeFlows.length===0) return `<div class="empty">Momentan läuft kein Personalaustausch.</div>`;
+  const cv = coverMode ? liveCovers() : [];
+  const coverRows = cv.map(v=>`<div class="flow-row">
+      <span class="flow-badge" style="background:var(--ink-soft)">${coverMode==='admin' ? esc(v.name) : 'Vertretung'}</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-badge" style="background:var(--teal)">${esc(classNameOf(v.to))}</span>
+      <span style="color:var(--ink-soft)">· ${blockLabel(v.blocks)}</span>
+      ${coverMode==='admin' ? `<div class="flow-actions"><button class="danger-btn" onclick="adminRemoveCover(${Number(v.id)})">Beenden</button></div>` : ''}
+    </div>`).join('');
+  if(activeFlows.length===0 && cv.length===0) return `<div class="empty">Momentan läuft kein Personalaustausch.</div>`;
   return activeFlows.map(f=>`<div class="flow-row">
       <span class="flow-badge">${esc(classNameOf(f.from))}</span>
       <span class="flow-arrow">→</span>
@@ -876,7 +1072,7 @@ function flowList(canEnd){
       <span style="color:var(--ink-soft)">· ${f.blocks.join(', ')}</span>
       <span class="flow-time">${f.time}</span>
       ${canEnd(f)? `<div class="flow-actions"><button class="danger-btn" onclick="endFlow(${Number(f.id)})">Beenden</button></div>`:''}
-    </div>`).join('');
+    </div>`).join('') + coverRows;
 }
 
 function renderLogin(app){
@@ -988,15 +1184,197 @@ function renderClassApp(app){
 
     <div class="card">
       <h2>Aktive Unterstützung</h2>
-      ${flowList(f=>f.from===mine.id||f.to===mine.id)}
+      ${flowList(f=>f.from===mine.id||f.to===mine.id, 'anon')}
     </div>
   `;
 }
 
-function renderAdmin(app){
-  const openNeedClasses = classes.filter(c=>needStatus(c)==='open');
+// ---------- Matrix: Klassen x Zeiträume ----------
+function mxCellHTML(c, b, opts){
+  const past = DAY_BLOCKS.indexOf(b) < curBlock();
+  const required = c.need > 0 && (c.needBlocks||[]).includes(b);
+  const names = coverNames(c.id, b);
+  const cnt = names.length;
+  let cls = 'mx-none', txt = '–';
+  if(required){
+    if(cnt >= c.need){ cls = 'mx-ok'; txt = '✓ ' + names.map(esc).join(', '); }
+    else { cls = 'mx-open'; txt = `fehlt ${c.need - cnt}` + (cnt ? `<small>${names.map(esc).join(', ')}</small>` : ''); }
+  } else if(cnt > 0){
+    cls = 'mx-ok'; txt = names.map(esc).join(', ');
+  }
+  if(past) cls += ' mx-past';
+  let attr = '';
+  if(opts.click && !past){
+    const sel = adminForm.to === c.id && adminForm.blocks.includes(b);
+    cls += ' mx-click' + (sel ? ' mx-sel' : '');
+    attr = ` onclick="adminPickCell('${c.id}','${b}')"`;
+  }
+  return `<div class="${cls}"${attr}>${txt}</div>`;
+}
+function matrixHTML(opts){
+  opts = opts || {};
   const cur = curBlock();
+  const head = `<div class="mx-h">Klasse</div>` + DAY_BLOCKS.map((b,i)=>`<div class="mx-h ${i===cur?'mx-now':''}">${b}</div>`).join('');
+  const rows = classes.map(c=>{
+    const away = absent.filter(a=>a.class_id === c.id).map(a=>esc(a.name));
+    const label = `<div class="mx-name">${esc(c.name)}${away.length ? `<small>abwesend: ${away.join(', ')}</small>` : ''}</div>`;
+    return label + DAY_BLOCKS.map(b=>mxCellHTML(c, b, opts)).join('');
+  }).join('');
+  return `<div class="mx" style="grid-template-rows:auto repeat(${classes.length},${opts.fill?'1fr':'auto'});">${head}${rows}</div>`;
+}
+
+// ---------- Bausteine der Schulleitungs-Ansicht ----------
+function viewPref(){
+  try{ const v = localStorage.getItem(VIEW_KEY); return (v==='mobile' || v==='desktop') ? v : 'auto'; }
+  catch(e){ return 'auto'; }
+}
+function isDesktopView(){
+  const p = viewPref();
+  if(p === 'desktop') return true;
+  if(p === 'mobile') return false;
+  return typeof window.innerWidth === 'number' && window.innerWidth >= 900;
+}
+function setViewPref(p){
+  try{ localStorage.setItem(VIEW_KEY, p); }catch(e){}
+  lastDesktop = isDesktopView();
+  render();
+}
+function copyDisplayLink(){
+  const url = location.origin + location.pathname + '#anzeige' + (REMOTE && remoteCode ? '=' + encodeURIComponent(remoteCode) : '');
+  const done = ()=>toast('Link kopiert. Er enthält den Schulcode, bitte nicht weitergeben.');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done, ()=>prompt('Link für die Anzeige:', url));
+  } else {
+    prompt('Link für die Anzeige:', url);
+  }
+}
+function viewToggleHTML(){
+  const p = viewPref();
+  return `<span class="seg" role="group" aria-label="Ansicht">
+    <button type="button" class="${p==='auto'?'on':''}" onclick="setViewPref('auto')">Auto</button>
+    <button type="button" class="${p==='mobile'?'on':''}" onclick="setViewPref('mobile')">Mobil</button>
+    <button type="button" class="${p==='desktop'?'on':''}" onclick="setViewPref('desktop')">Desktop</button>
+  </span>`;
+}
+function blockControlsHTML(){
+  const cur = curBlock();
+  return `<span class="current-block">Aktuell: ${blockName()}</span>
+    <span class="advance-row">${cur>0? '<button class="advance-btn" onclick="stepBlock(-1)">‹ Zurück</button>' : ''}${cur<DAY_BLOCKS.length? `<button class="advance-btn" onclick="stepBlock(1)">Weiter ›</button>` : ''}</span>`;
+}
+function blockCaptionHTML(){
   const times = blockEnds.length === DAY_BLOCKS.length ? blockEnds.join(' · ') : '';
+  return `${times ? `Wechselt automatisch um ${times} Uhr. ` : ''}Manuelles Umschalten gilt bis zur nächsten Uhrzeit. Zusagen für vergangene Zeiträume laufen automatisch ab.`;
+}
+function summaryHTML(){
+  const n = classes.filter(c=>needStatus(c)==='open').length;
+  return `<div class="overview-summary">
+    <div class="ov-stat ov-need"><span>${n}</span>Hilfe nötig</div>
+    <div class="ov-stat ov-flat"><span>${classes.length - n}</span>ausgeglichen</div>
+  </div>`;
+}
+function openNeedsCardHTML(){
+  const list = classes.filter(c=>needStatus(c)==='open');
+  return `<div class="card">
+    <h2>Alle offenen Bedarfe</h2>
+    ${list.length===0? `<div class="empty">Aktuell meldet keine Klasse Bedarf.</div>` :
+      list.map(c=>`<div class="flow-row">
+          <span class="flow-badge" style="background:var(--amber);color:#4A3200;">${esc(c.name)}</span>
+          <span style="color:var(--ink-soft)">offen: ${openBlocksFor(c).join(', ')}</span>
+          <div class="flow-actions"><button class="danger-btn" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button></div>
+        </div>`).join('')}
+  </div>`;
+}
+function assignCardHTML(){
+  const cover = adminForm.mode === 'cover';
+  const classOpts = sel => `<option value="">– wählen –</option>` + classes.map(c=>`<option value="${c.id}" ${sel===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  return `<div class="card">
+    <h2>Zuweisen</h2>
+    <div class="mode-row">
+      <button type="button" class="block-chip ${!cover?'active':''}" aria-pressed="${!cover}" onclick="setAdminMode('class')">Aus einer Klasse</button>
+      <button type="button" class="block-chip ${cover?'active':''}" aria-pressed="${cover}" onclick="setAdminMode('cover')">Vertretung (Name)</button>
+    </div>
+    ${cover ? `
+      <label class="admin-label" for="admName">Wer vertritt?</label>
+      <input id="admName" class="text-input" type="text" maxlength="60" autocomplete="off" placeholder="Name" value="${esc(adminForm.name)}" oninput="adminForm.name=this.value" onkeydown="if(event.key==='Enter')adminAssign()">
+    ` : `
+      <label class="admin-label" for="admFrom">Von Klasse</label>
+      <select id="admFrom" class="admin-select" onchange="setAdminField('from', this.value)">${classOpts(adminForm.from)}</select>
+    `}
+    <label class="admin-label" for="admTo">${cover ? 'In Klasse' : 'Zu Klasse'}</label>
+    <select id="admTo" class="admin-select" onchange="setAdminField('to', this.value)">${classOpts(adminForm.to)}</select>
+    <label class="admin-label">Zeitraum</label>
+    <div class="block-row">
+      ${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${adminForm.blocks.includes(b)&&isFutureBlock(b)?'active':''}" aria-pressed="${adminForm.blocks.includes(b)}" ${isFutureBlock(b)?'':'disabled'} onclick="toggleAdminBlock('${b}')">${b}</button>`).join('')}
+    </div>
+    ${cover ? `<div class="hint">Ohne Auswahl gilt der restliche Tag.</div>` : ''}
+    <button class="help-btn" onclick="adminAssign()">${cover ? 'Vertretung eintragen' : 'Zuweisen'}</button>
+  </div>`;
+}
+function absentCardHTML(){
+  return `<div class="card">
+    <h2>Abwesend</h2>
+    ${absent.length===0 ? `<div class="empty">Niemand eingetragen.</div>` :
+      absent.map(a=>`<div class="person-row">
+        <span>${esc(a.name)}</span>
+        ${a.class_id ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(a.class_id))}</span>` : ''}
+        <button class="danger-btn" style="margin-left:auto;" onclick="adminRemoveAbsent(${Number(a.id)})">Entfernen</button>
+      </div>`).join('')}
+    <label class="admin-label" for="absName">Neu eintragen</label>
+    <input id="absName" class="text-input" type="text" maxlength="60" autocomplete="off" placeholder="Name" value="${esc(absentForm.name)}" oninput="absentForm.name=this.value" onkeydown="if(event.key==='Enter')adminAddAbsent()">
+    <select class="admin-select" aria-label="Klasse (optional)" onchange="absentForm.classId=this.value">
+      <option value="">Klasse (optional)</option>
+      ${classes.map(c=>`<option value="${c.id}" ${absentForm.classId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+    </select>
+    <button class="help-btn" onclick="adminAddAbsent()">Eintragen</button>
+  </div>`;
+}
+function activeEngagementsHTML(){
+  return `<div class="card">
+    <h2>Alle aktiven Einsätze</h2>
+    ${flowList(()=>true, 'admin')}
+  </div>`;
+}
+
+function renderAdmin(app){
+  const desk = isDesktopView();
+  lastDesktop = desk;
+  setBodyMode(desk ? 'desk' : null);
+
+  if(desk){
+    app.innerHTML = `
+      <header class="top adm-head">
+        <div>
+          <div class="eyebrow">Heute · ${dateLine()}</div>
+          <h1>Schulleitung</h1>
+        </div>
+        <div class="adm-tools">
+          <div class="block-progress">${blockControlsHTML()}</div>
+          ${viewToggleHTML()}
+          <a class="switch-btn" href="#anzeige" target="_blank" rel="noopener">Aula-Anzeige ↗</a>
+          ${REMOTE ? `<button class="switch-btn" onclick="copyDisplayLink()">Link für Anzeige kopieren</button>` : ''}
+          <button class="switch-btn" onclick="switchUser()">Abmelden</button>
+        </div>
+      </header>
+      ${localNotice()}
+      ${configNotice()}
+      <div class="desk-grid">
+        <div>
+          <div class="card">
+            ${summaryHTML()}
+            ${matrixHTML({click:true})}
+            <div class="hint">Feld anklicken, um es unter „Zuweisen“ vorzuwählen. ${blockCaptionHTML()}</div>
+          </div>
+          ${activeEngagementsHTML()}
+        </div>
+        <div>
+          ${assignCardHTML()}
+          ${absentCardHTML()}
+          ${openNeedsCardHTML()}
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   app.innerHTML = `
     <header class="top">
@@ -1006,55 +1384,70 @@ function renderAdmin(app){
         <span>Master-Kontrolle</span>
         <button class="switch-btn" onclick="switchUser()">Abmelden</button>
       </div>
-      <div class="block-progress">
-        <span class="current-block">Aktuell: ${blockName()}</span>
-        <span class="advance-row">${cur>0? '<button class="advance-btn" onclick="stepBlock(-1)">‹ Zurück</button>' : ''}${cur<DAY_BLOCKS.length? `<button class="advance-btn" onclick="stepBlock(1)">Weiter ›</button>` : ''}</span>
+      <div class="block-progress">${blockControlsHTML()}</div>
+      <div class="block-progress-caption">${blockCaptionHTML()}</div>
+      <div class="adm-tools-m">
+        ${viewToggleHTML()}
+        <a class="switch-btn" href="#anzeige" target="_blank" rel="noopener">Anzeige ↗</a>
+        ${REMOTE ? `<button class="switch-btn" onclick="copyDisplayLink()">Link kopieren</button>` : ''}
       </div>
-      <div class="block-progress-caption">${times ? `Wechselt automatisch um ${times} Uhr. ` : ''}Manuelles Umschalten gilt bis zur nächsten Uhrzeit. Zusagen für vergangene Zeiträume laufen automatisch ab.</div>
       ${localNotice()}
     </header>
     ${configNotice()}
 
     ${overviewCard(false)}
+    ${openNeedsCardHTML()}
+    ${assignCardHTML()}
+    ${absentCardHTML()}
+    ${activeEngagementsHTML()}
+  `;
+}
 
-    <div class="card">
-      <h2>Alle offenen Bedarfe</h2>
-      ${openNeedClasses.length===0? `<div class="empty">Aktuell meldet keine Klasse Bedarf.</div>` :
-        openNeedClasses.map(c=>{
-          const open = openBlocksFor(c);
-          return `<div class="flow-row">
-            <span class="flow-badge" style="background:var(--amber);color:#4A3200;">${esc(c.name)}</span>
-            <span style="color:var(--ink-soft)">offen: ${open.join(', ')}</span>
-            <div class="flow-actions"><button class="danger-btn" onclick="adminClearNeed('${c.id}')">Bedarf schließen</button></div>
-          </div>`;
-        }).join('')
-      }
-    </div>
-
-    <div class="card">
-      <h2>Personal manuell zuweisen</h2>
-      <label class="admin-label" for="admFrom">Von Klasse</label>
-      <select id="admFrom" class="admin-select" onchange="setAdminField('from', this.value)">
-        <option value="">– wählen –</option>
-        ${classes.map(c=>`<option value="${c.id}" ${adminForm.from===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
-      </select>
-      <label class="admin-label" for="admTo">Zu Klasse</label>
-      <select id="admTo" class="admin-select" onchange="setAdminField('to', this.value)">
-        <option value="">– wählen –</option>
-        ${classes.map(c=>`<option value="${c.id}" ${adminForm.to===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
-      </select>
-      <label class="admin-label">Zeitraum</label>
-      <div class="block-row">
-        ${DAY_BLOCKS.map(b=>`<button type="button" class="block-chip ${adminForm.blocks.includes(b)&&isFutureBlock(b)?'active':''}" aria-pressed="${adminForm.blocks.includes(b)}" ${isFutureBlock(b)?'':'disabled'} onclick="toggleAdminBlock('${b}')">${b}</button>`).join('')}
+// ---------- Anzeige für den Bildschirm in der Aula ----------
+function renderDisplay(app){
+  const n = classes.filter(c=>needStatus(c)==='open').length;
+  const cv = liveCovers();
+  app.innerHTML = `
+    <div class="dp">
+      <header class="dp-head">
+        <div>
+          <div class="dp-date">${dateLine()}</div>
+          <div class="dp-title">Personalübersicht</div>
+        </div>
+        <div class="dp-right">
+          <div class="dp-block">Aktuell: ${blockName()}</div>
+          <div class="dp-stat need"><b>${n}</b>Hilfe nötig</div>
+          <div class="dp-stat flat"><b>${classes.length - n}</b>ausgeglichen</div>
+          <div class="dp-stand">Stand<br>${lastRefresh || ''}</div>
+        </div>
+      </header>
+      <div class="dp-body">
+        <div class="dp-matrix">${matrixHTML({fill:true})}</div>
+        <aside class="dp-side">
+          <div class="card">
+            <h2>Abwesend</h2>
+            ${absent.length===0 ? `<div class="empty">Niemand gemeldet.</div>` :
+              absent.map(a=>`<div class="person-row"><span>${esc(a.name)}</span>${a.class_id ? `<span style="color:var(--ink-soft)">· ${esc(classNameOf(a.class_id))}</span>` : ''}</div>`).join('')}
+          </div>
+          <div class="card">
+            <h2>Vertretung</h2>
+            ${cv.length===0 ? `<div class="empty">Keine Vertretung eingetragen.</div>` :
+              cv.map(v=>`<div class="person-row"><b>${esc(v.name)}</b><span>in ${esc(classNameOf(v.to))}</span><span style="color:var(--ink-soft)">· ${blockLabel(v.blocks)}</span></div>`).join('')}
+          </div>
+        </aside>
       </div>
-      <button class="help-btn" onclick="adminAssign()">Zuweisen</button>
-    </div>
-
-    <div class="card">
-      <h2>Alle aktiven Einsätze</h2>
-      ${flowList(()=>true)}
+      ${connectionOk ? '' : '<div class="dp-offline">Keine Verbindung. Die Anzeige kann veraltet sein.</div>'}
     </div>
   `;
+}
+
+if(typeof window.addEventListener === 'function'){
+  window.addEventListener('resize', ()=>{
+    if(DISPLAY || !currentUser || currentUser.type !== 'admin') return;
+    const d = isDesktopView();
+    if(d !== lastDesktop) safeRender();
+  });
+  window.addEventListener('hashchange', ()=>{ if(typeof location !== 'undefined' && location.reload) location.reload(); });
 }
 
 initApp();
