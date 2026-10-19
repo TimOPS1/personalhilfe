@@ -221,8 +221,8 @@
   .date-row{display:flex;gap:10px;margin-top:6px;}
   .date-row label{flex:1;min-width:0;font-size:13px;color:var(--ink-soft);font-weight:600;}
   .date-row input{min-width:0;width:100%;}
-  .week-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
-  .week-title{font-weight:700;color:var(--teal-deep);flex:1;text-align:center;min-width:12em;}
+  .week-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .week-title{font-weight:700;color:var(--teal-deep);flex:1;text-align:center;min-width:0;}
   .advance-btn:disabled{opacity:.35;cursor:default;}
   .mx.mx-week{grid-template-columns:minmax(6.5em,1fr) repeat(5,minmax(0,1fr));min-width:560px;}
   .mx-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -1536,14 +1536,14 @@ function seriesGroups(list, kind){
 function blocksText(blocks){ return (blocks && blocks.length && blocks.length < DAY_BLOCKS.length) ? blockLabel(blocks) : 'Ganzer Tag'; }
 
 // ----- Aktionen -----
-function setAdminTab(t){ adminTab = t; planSel = null; render(); }
+function setAdminTab(t){ adminTab = t; planSel = null; planForm.from = ''; planForm.to = ''; render(); }
 function shiftWeek(n){ weekOffset = Math.max(0, Math.min(26, n === 0 ? 0 : weekOffset + n)); planSel = null; render(); }
 function pickPlanCell(day, classId){
   planSel = (planSel && planSel.day === day && planSel.classId === classId) ? null : {day, classId};
   if(planSel){ planForm.from = day; planForm.to = day; planForm.classId = classId; }
   render();
 }
-function setPlanKind(k){ planForm.kind = k; render(); }
+function setPlanKind(k){ planForm.kind = k; planForm.from = ''; planForm.to = ''; render(); }
 function togglePlanBlock(b){ const i = planForm.blocks.indexOf(b); if(i>=0) planForm.blocks.splice(i,1); else planForm.blocks.push(b); render(); }
 function toggleClassPlanBlock(b){ const i = classPlanForm.blocks.indexOf(b); if(i>=0) classPlanForm.blocks.splice(i,1); else classPlanForm.blocks.push(b); render(); }
 function normRange(f){
@@ -1564,7 +1564,7 @@ async function planCall(name, args, okText, after){
 const daysText = res => res && res.days ? ` (${res.days} Schultag${res.days === 1 ? '' : 'e'})` : '';
 function submitPlan(){
   const f = planForm, r = normRange(f), blocks = DAY_BLOCKS.filter(b=>f.blocks.includes(b));
-  const reset = ()=>{ planForm.name = ''; planForm.blocks = []; planForm.label = ''; };
+  const reset = ()=>{ planForm.name = ''; planForm.blocks = []; planForm.label = ''; planForm.from = ''; planForm.to = ''; };
   if(f.kind === 'free'){
     return planCall('ph_admin_set_free', {p_token:adminToken, p_from:r.from, p_to:r.to, p_label:f.label||''}, res=>'Unterrichtsfrei eingetragen' + daysText(res), reset);
   }
@@ -1593,7 +1593,7 @@ function removeFree(from, to){
 function submitClassPlan(){
   const f = classPlanForm, r = normRange(f), blocks = DAY_BLOCKS.filter(b=>f.blocks.includes(b));
   return planCall('ph_class_plan_absent', {p_code:remoteCode, p_class:myClassId, p_name:(f.name||'').trim(), p_from:r.from, p_to:r.to, p_blocks:blocks},
-    res=>'Im Voraus gemeldet' + daysText(res), ()=>{ classPlanForm.name = ''; classPlanForm.blocks = []; });
+    res=>'Im Voraus gemeldet' + daysText(res), ()=>{ classPlanForm.name = ''; classPlanForm.blocks = []; classPlanForm.from = ''; classPlanForm.to = ''; });
 }
 function classRemoveSeries(series){
   if(!confirm('Diese Meldung für alle Tage entfernen?')) return;
@@ -1632,8 +1632,8 @@ function weekHTML(){
     <div class="week-nav">
       <button class="advance-btn" ${weekOffset<=0?'disabled':''} onclick="shiftWeek(-1)">‹</button>
       <div class="week-title">KW ${isoWeekNo(mon)} · ${fmtDay(days[0])} – ${fmtDay(days[4])}</div>
+      <button class="advance-btn" ${weekOffset<=0?'disabled':''} onclick="shiftWeek(0)">Diese Woche</button>
       <button class="advance-btn" ${weekOffset>=26?'disabled':''} onclick="shiftWeek(1)">›</button>
-      ${weekOffset ? `<button class="advance-btn" onclick="shiftWeek(0)">Diese Woche</button>` : ''}
     </div>
     <div class="mx-scroll"><div class="mx mx-week" style="grid-template-rows:auto repeat(${classes.length},auto);">${head}${rows}</div></div>
     <div class="hint">„fehlt“: mindestens ein Zeitraum ist nicht gedeckt. Feld anklicken für Details, Datum und Klasse werden ins Formular übernommen.</div>
@@ -1691,6 +1691,80 @@ function seriesListHTML(){
       </div>`).join('')}
   </div>`;
 }
+// Schulferien und gesetzliche Feiertage Hessen von OpenHolidays (openholidaysapi.org) holen.
+// Erst Vorschau, übernommen wird nur auf Knopfdruck. Bewegliche Ferientage gibt es dort nicht.
+let holidayPreview = null;   // null | 'loading' | [{from, to, label}]
+function hasSchoolDay(from, to){ for(let d = from; d <= to; d = isoAdd(d, 1)){ if(isoWeekday(d) <= 5) return true; } return false; }
+async function loadHessenHolidays(){
+  holidayPreview = 'loading'; render();
+  const from = isoToday(), until = isoAdd(from, 365);
+  const q = `countryIsoCode=DE&subdivisionCode=DE-HE&languageIsoCode=DE&validFrom=${from}&validTo=${until}`;
+  const get = async path => {
+    const r = await fetch(`https://openholidaysapi.org/${path}?${q}`, {headers:{accept:'application/json'}});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if(!Array.isArray(j)) throw new Error('Format');
+    return j;
+  };
+  const isoOk = x => /^\d{4}-\d{2}-\d{2}$/.test(x);
+  // Bewegliche Ferientage aus config.js (Schulamt Weilburg), unabhängig vom Online-Dienst
+  const moving = (Array.isArray(CFG.beweglicheFerientage) ? CFG.beweglicheFerientage : [])
+    .map(x=>({from:String(x && x.day || ''), to:String(x && x.day || ''), label:String(x && x.label || 'Beweglicher Ferientag').slice(0, 40)}))
+    .filter(x=>isoOk(x.from) && x.from >= from && x.from <= until && isoWeekday(x.from) <= 5);
+  let school = [], pub = [], online = true;
+  try{
+    [school, pub] = await Promise.all([get('SchoolHolidays'), get('PublicHolidays')]);
+  }catch(e){ online = false; }
+  try{
+    const label = h => { const n = (h.name||[]).find(x=>x.language==='DE') || (h.name||[])[0]; return String((n && n.text) || 'frei').slice(0, 40); };
+    const seen = new Set();
+    // Feiertage, die ganz in Schulferien liegen, nicht extra aufführen
+    const inSchool = h => school.some(x=>String(x.startDate).slice(0,10) <= String(h.startDate).slice(0,10) && String(h.endDate).slice(0,10) <= String(x.endDate).slice(0,10));
+    holidayPreview = school.concat(pub.filter(h=>!inSchool(h)))
+      .map(h=>({from:String(h.startDate||'').slice(0,10), to:String(h.endDate||'').slice(0,10), label:label(h)}))
+      .filter(x=>isoOk(x.from) && isoOk(x.to) && x.to >= from && x.from <= until)
+      .map(x=>({from: x.from < from ? from : x.from, to: x.to > until ? until : x.to, label:x.label}))
+      .filter(x=>hasSchoolDay(x.from, x.to))
+      .concat(moving)
+      .filter(x=>{ const k = x.from + x.to; if(seen.has(k)) return false; seen.add(k); return true; })
+      .sort((a,b)=>a.from < b.from ? -1 : 1);
+  }catch(e){
+    holidayPreview = moving;
+  }
+  if(!online) toast(moving.length ? 'Ferien Hessen konnten nicht geladen werden. Vorschau zeigt nur die beweglichen Ferientage.' : 'Ferien konnten nicht geladen werden. Bitte von Hand eintragen.');
+  if(!online && !moving.length) holidayPreview = null;
+  render();
+}
+async function applyHolidays(){
+  if(!Array.isArray(holidayPreview) || busy) return;
+  busy = true;
+  let okCount = 0, failCount = 0;
+  try{
+    for(const h of holidayPreview){
+      const res = await BACKEND.rpc('ph_admin_set_free', {p_token:adminToken, p_from:h.from, p_to:h.to, p_label:h.label});
+      if(res && res.ok) okCount++; else failCount++;
+    }
+  } finally { busy = false; }
+  holidayPreview = null;
+  toast(failCount ? `${okCount} übernommen, ${failCount} fehlgeschlagen` : `${okCount} Zeiträume als unterrichtsfrei übernommen`);
+  await refreshRemote();
+}
+function discardHolidays(){ holidayPreview = null; render(); }
+function holidayImportHTML(){
+  if(holidayPreview === 'loading') return `<div class="hint">Lade Ferien und Feiertage …</div>`;
+  if(Array.isArray(holidayPreview)){
+    return `<label class="admin-label">Vorschau (${holidayPreview.length})</label>
+      ${holidayPreview.length === 0 ? `<div class="empty">Nichts gefunden.</div>` : holidayPreview.map(h=>`<div class="person-row">
+        <span>${esc(h.label)}</span><span style="color:var(--ink-soft)">· ${fmtRange(h.from, h.to)}</span></div>`).join('')}
+      <div class="hint">Quellen: Ferien und Feiertage von OpenHolidays (openholidaysapi.org), bewegliche Ferientage aus config.js (Staatliches Schulamt Weilburg). Bitte kurz gegenprüfen. Bestehende Einträge an denselben Tagen werden überschrieben.</div>
+      <div class="mode-row" style="margin-top:8px;">
+        <button class="help-btn" style="flex:1;margin-top:0;" ${holidayPreview.length ? '' : 'disabled'} onclick="applyHolidays()">Übernehmen</button>
+        <button class="switch-btn" onclick="discardHolidays()">Verwerfen</button>
+      </div>`;
+  }
+  return `<button class="switch-btn" style="width:100%;margin-top:10px;" onclick="loadHessenHolidays()">Ferien und Feiertage Hessen laden</button>
+    <div class="hint">Holt Schulferien und gesetzliche Feiertage Hessen für die nächsten 12 Monate, dazu die beweglichen Ferientage des Schulamts Weilburg aus config.js (einmal pro Schuljahr dort ergänzen).</div>`;
+}
 function freeListHTML(){
   // aufeinanderfolgende Schultage mit gleicher Bezeichnung zusammenfassen
   const runs = [];
@@ -1707,6 +1781,7 @@ function freeListHTML(){
         <span>${esc(r.label || 'frei')}</span><span style="color:var(--ink-soft)">· ${fmtRange(r.from, r.to)}</span>
         <button class="danger-btn" style="margin-left:auto;" onclick="removeFree('${r.from}','${r.to}')">Entfernen</button>
       </div>`).join('')}
+    ${holidayImportHTML()}
   </div>`;
 }
 function adminTabsHTML(){
