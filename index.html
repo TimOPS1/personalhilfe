@@ -1707,8 +1707,15 @@ async function loadHessenHolidays(){
     return j;
   };
   const isoOk = x => /^\d{4}-\d{2}-\d{2}$/.test(x);
+  // Bewegliche Ferientage aus config.js (Schulamt Weilburg), unabhängig vom Online-Dienst
+  const moving = (Array.isArray(CFG.beweglicheFerientage) ? CFG.beweglicheFerientage : [])
+    .map(x=>({from:String(x && x.day || ''), to:String(x && x.day || ''), label:String(x && x.label || 'Beweglicher Ferientag').slice(0, 40)}))
+    .filter(x=>isoOk(x.from) && x.from >= from && x.from <= until && isoWeekday(x.from) <= 5);
+  let school = [], pub = [], online = true;
   try{
-    const [school, pub] = await Promise.all([get('SchoolHolidays'), get('PublicHolidays')]);
+    [school, pub] = await Promise.all([get('SchoolHolidays'), get('PublicHolidays')]);
+  }catch(e){ online = false; }
+  try{
     const label = h => { const n = (h.name||[]).find(x=>x.language==='DE') || (h.name||[])[0]; return String((n && n.text) || 'frei').slice(0, 40); };
     const seen = new Set();
     // Feiertage, die ganz in Schulferien liegen, nicht extra aufführen
@@ -1718,12 +1725,14 @@ async function loadHessenHolidays(){
       .filter(x=>isoOk(x.from) && isoOk(x.to) && x.to >= from && x.from <= until)
       .map(x=>({from: x.from < from ? from : x.from, to: x.to > until ? until : x.to, label:x.label}))
       .filter(x=>hasSchoolDay(x.from, x.to))
+      .concat(moving)
       .filter(x=>{ const k = x.from + x.to; if(seen.has(k)) return false; seen.add(k); return true; })
       .sort((a,b)=>a.from < b.from ? -1 : 1);
   }catch(e){
-    holidayPreview = null;
-    toast('Ferien konnten nicht geladen werden. Bitte von Hand eintragen.');
+    holidayPreview = moving;
   }
+  if(!online) toast(moving.length ? 'Ferien Hessen konnten nicht geladen werden. Vorschau zeigt nur die beweglichen Ferientage.' : 'Ferien konnten nicht geladen werden. Bitte von Hand eintragen.');
+  if(!online && !moving.length) holidayPreview = null;
   render();
 }
 async function applyHolidays(){
@@ -1747,14 +1756,14 @@ function holidayImportHTML(){
     return `<label class="admin-label">Vorschau (${holidayPreview.length})</label>
       ${holidayPreview.length === 0 ? `<div class="empty">Nichts gefunden.</div>` : holidayPreview.map(h=>`<div class="person-row">
         <span>${esc(h.label)}</span><span style="color:var(--ink-soft)">· ${fmtRange(h.from, h.to)}</span></div>`).join('')}
-      <div class="hint">Quelle: OpenHolidays (openholidaysapi.org). Bitte kurz gegenprüfen. Bestehende Einträge an denselben Tagen werden überschrieben.</div>
+      <div class="hint">Quellen: Ferien und Feiertage von OpenHolidays (openholidaysapi.org), bewegliche Ferientage aus config.js (Staatliches Schulamt Weilburg). Bitte kurz gegenprüfen. Bestehende Einträge an denselben Tagen werden überschrieben.</div>
       <div class="mode-row" style="margin-top:8px;">
         <button class="help-btn" style="flex:1;margin-top:0;" ${holidayPreview.length ? '' : 'disabled'} onclick="applyHolidays()">Übernehmen</button>
         <button class="switch-btn" onclick="discardHolidays()">Verwerfen</button>
       </div>`;
   }
   return `<button class="switch-btn" style="width:100%;margin-top:10px;" onclick="loadHessenHolidays()">Ferien und Feiertage Hessen laden</button>
-    <div class="hint">Holt Schulferien und gesetzliche Feiertage für die nächsten 12 Monate. Bewegliche Ferientage bitte selbst oben unter „Im Voraus eintragen“ → „Unterrichtsfrei“ ergänzen.</div>`;
+    <div class="hint">Holt Schulferien und gesetzliche Feiertage Hessen für die nächsten 12 Monate, dazu die beweglichen Ferientage des Schulamts Weilburg aus config.js (einmal pro Schuljahr dort ergänzen).</div>`;
 }
 function freeListHTML(){
   // aufeinanderfolgende Schultage mit gleicher Bezeichnung zusammenfassen

@@ -13,6 +13,17 @@ window.PERSONALHILFE_CONFIG = {
   // in supabase/schema.sql (Funktion ph_block_ends) und werden von dort übernommen.
   blockEnds: ["10:30", "11:45", "12:45", "14:25"],
 
+  // Bewegliche Ferientage, festgelegt vom Staatlichen Schulamt Weilburg (Lahn-Dill-Kreis und
+  // Landkreis Limburg-Weilburg). Quelle: https://schulaemter.hessen.de/schulbesuch/bewegliche-ferientage
+  // Einmal im Jahr für das neue Schuljahr ergänzen. Sie erscheinen beim Knopf
+  // "Ferien und Feiertage Hessen laden" in der Vorschau; vergangene Tage werden ausgelassen.
+  beweglicheFerientage: [
+    { day: "2026-10-02", label: "Beweglicher Ferientag" },   // Tag vor den Herbstferien
+    { day: "2027-02-08", label: "Rosenmontag" },
+    { day: "2027-05-07", label: "Beweglicher Ferientag" },   // Tag nach Christi Himmelfahrt
+    { day: "2027-05-28", label: "Beweglicher Ferientag" }    // Tag nach Fronleichnam
+  ],
+
   // Nur für den lokalen Betrieb ohne Supabase. Kein echter Schutz, weil dieser Hash öffentlich ist.
   // SHA-256-Hash des Schulleitungs-Passworts (das Passwort selbst steht nicht im Code).
   // Neuen Hash erzeugen: im Browser die Konsole öffnen und eingeben:
