@@ -13,9 +13,12 @@ Läuft als statische Seite über GitHub Pages und lässt sich auf dem Handy als 
 - Schulleitung am PC: Matrix aus Klassen und Zeiträumen. Die Ansicht schaltet nach Bildschirmbreite automatisch zwischen Desktop und Mobil (ab 900 px Breite Desktop), der Umschalter Auto / Mobil / Desktop erzwingt eine der beiden. Ein Feld der Matrix anklicken wählt es unter "Zuweisen" vor.
 - Schulleitung trägt Abwesende ein, für den ganzen Tag oder einzelne Zeiträume ("nur 3. Block", "kommt später" = die frühen Zeiträume). Ist eine Klasse angegeben, fehlt dort automatisch 1 Person pro Abwesendem; meldet die Klasse selbst mehr Bedarf, gilt der höhere Wert.
 - Schulleitung kann Vertretungen eintragen ("Frau X vertritt in Klasse A", ganzer Tag oder einzelne Zeiträume). Eine Vertretung zählt wie ein Einsatz und deckt den Bedarf der Klasse. In der Matrix sind Vertretungen blau-grau, Hilfe aus einer anderen Klasse grün.
+- **Planung im Voraus (bis 6 Monate):** Klassen melden Abwesenheiten für ihre eigene Klasse über einen Zeitraum ("Frau X, 26.10.–6.11."), die Schulleitung trägt Abwesenheiten, Vertretungen und unterrichtsfreie Tage (Ferien, Feiertage) ein. Wochenenden und freie Tage werden übersprungen. Ein mehrtägiger Eintrag lässt sich als Ganzes entfernen. Gründe werden nicht gespeichert.
+- Schulleitung, Reiter "Planung": Wochenansicht Klassen × Mo–Fr mit "fehlt" / "gedeckt", blätterbar bis 26 Wochen voraus. Ein Feld anklicken zeigt die Einträge des Tages und übernimmt Datum und Klasse ins Formular.
+- Klassen sehen ihre geplanten Meldungen und ob dafür schon eine Vertretung (mit Namen) geplant ist.
 - Aula-Anzeige: eigene Seite für einen großen Bildschirm, nur lesend, aktualisiert sich selbst (siehe unten).
 - Die gewählte Klasse wird auf dem Gerät gemerkt. "Neu wählen" für Vertretungstage.
-- Es werden keine Namen von Kindern gespeichert. Namen von Mitarbeitenden stehen nur in der Abwesenheits- und Vertretungsliste, die die Schulleitung pflegt. Gespeichert wird nur der heutige Tag.
+- Es werden keine Namen von Kindern gespeichert. Namen von Mitarbeitenden stehen nur in der Abwesenheits- und Vertretungsliste. Abwesenheiten können Schulleitung und Klassen eintragen (jede Person mit Schulcode, nur für die gewählte Klasse), Vertretungen nur die Schulleitung. Vergangene Tage werden gelöscht; im Voraus Geplantes liegt höchstens 6 Monate vor.
 
 ## Anpassen (ohne Programmieren)
 

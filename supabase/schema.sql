@@ -17,7 +17,8 @@
 --   * Fehlversuche werden pro Absender gezählt und bremsen das Durchprobieren.
 --   * Der Live-Abgleich sendet nur ein inhaltsloses Signal "es hat sich etwas
 --     geändert"; die Daten selbst holt jedes Handy mit dem Schulcode ab.
---   * Gespeichert wird nur der heutige Tag; ältere Tage werden automatisch gelöscht.
+--   * Vergangene Tage werden automatisch gelöscht. Im Voraus geplante Abwesenheiten,
+--     Vertretungen und freie Tage liegen höchstens bis heute + 183 Tage (freie Tage + 366) vor.
 --   * Es werden nur Klassen-Kennungen, Zeiträume und Zahlen gespeichert, keine Namen
 --     von Kindern. Einzige Ausnahme: die Schulleitung kann Abwesende und Vertretungen
 --     mit Namen eintragen (ph_absent, ph_cover). Auch diese Tabellen sind von außen
@@ -94,6 +95,20 @@ create table if not exists public.ph_cover (
 );
 create index if not exists ph_cover_day_idx on public.ph_cover (day);
 
+-- Planung im Voraus: Einträge über mehrere Tage gehören zu einer Serie und lassen sich
+-- gemeinsam entfernen. Einzelne Tage bleiben eigene Zeilen, damit die Tageslogik gleich bleibt.
+alter table public.ph_absent add column if not exists series uuid;
+alter table public.ph_cover  add column if not exists series uuid;
+create index if not exists ph_absent_series_idx on public.ph_absent (series);
+create index if not exists ph_cover_series_idx  on public.ph_cover (series);
+
+-- Unterrichtsfreie Tage (Ferien, Feiertage), von der Schulleitung gepflegt.
+-- Geplante Zeiträume überspringen diese Tage und die Wochenenden.
+create table if not exists public.ph_free (
+  day   date primary key,
+  label text not null default '' check (char_length(label) <= 40)
+);
+
 -- 2) Zugriffsschutz: keine direkten Lese- oder Schreibrechte von außen ----
 
 alter table public.ph_needs    enable row level security;
@@ -104,6 +119,7 @@ alter table public.ph_sessions enable row level security;
 alter table public.ph_attempts enable row level security;
 alter table public.ph_absent   enable row level security;
 alter table public.ph_cover    enable row level security;
+alter table public.ph_free     enable row level security;
 
 -- Frühere Fassungen erlaubten allen das Lesen. Das wird hier zurückgenommen.
 drop policy if exists ph_read_needs on public.ph_needs;
@@ -112,7 +128,7 @@ drop policy if exists ph_read_day   on public.ph_day;
 
 revoke all on public.ph_needs, public.ph_flows, public.ph_day,
               public.ph_secrets, public.ph_sessions, public.ph_attempts,
-              public.ph_absent, public.ph_cover
+              public.ph_absent, public.ph_cover, public.ph_free
   from anon, authenticated;
 
 -- Frühere Fassungen haben die Tabellen selbst live verteilt (mit Inhalt). Abschalten.
@@ -275,6 +291,7 @@ begin
   if exists (select 1 from ph_day   where day < v_day) then delete from ph_day   where day < v_day; end if;
   if exists (select 1 from ph_absent where day < v_day) then delete from ph_absent where day < v_day; end if;
   if exists (select 1 from ph_cover  where day < v_day) then delete from ph_cover  where day < v_day; end if;
+  if exists (select 1 from ph_free   where day < v_day) then delete from ph_free   where day < v_day; end if;
   if exists (select 1 from ph_sessions where expires_at < now()) then
     delete from ph_sessions where expires_at < now();
   end if;
@@ -307,12 +324,17 @@ create trigger ph_flows_notify after insert or update or delete on public.ph_flo
   for each row execute function public.ph_notify();
 create trigger ph_day_notify   after insert or update or delete on public.ph_day
   for each row execute function public.ph_notify();
+-- Abwesende, Vertretungen und freie Tage: ein Signal pro Befehl, nicht pro Zeile
+-- (eine Planung über Wochen legt viele Zeilen auf einmal an)
 drop trigger if exists ph_absent_notify on public.ph_absent;
 drop trigger if exists ph_cover_notify  on public.ph_cover;
+drop trigger if exists ph_free_notify   on public.ph_free;
 create trigger ph_absent_notify after insert or update or delete on public.ph_absent
-  for each row execute function public.ph_notify();
+  for each statement execute function public.ph_notify();
 create trigger ph_cover_notify  after insert or update or delete on public.ph_cover
-  for each row execute function public.ph_notify();
+  for each statement execute function public.ph_notify();
+create trigger ph_free_notify   after insert or update or delete on public.ph_free
+  for each statement execute function public.ph_notify();
 
 -- 4) Öffentliche Funktionen (alle geben jsonb zurück: {ok:true,...} oder {ok:false,error:...})
 
@@ -676,6 +698,196 @@ begin
 end
 $fn$;
 
+-- Planung im Voraus ---------------------------------------------------
+
+-- Schultage in einem Zeitraum: nur heute bis heute + 183 Tage, ohne Wochenenden und freie Tage.
+-- Gibt null zurück, wenn der Zeitraum ungültig ist.
+create or replace function public.ph_school_days(p_from date, p_to date) returns date[]
+language sql stable security definer set search_path = public as
+$fn$
+  select case
+    when p_from is null or p_to is null or p_from > p_to
+      or p_from < ph_today() or p_to > ph_today() + 183 then null
+    else coalesce((
+      select array_agg(d::date order by d)
+      from generate_series(p_from, p_to, interval '1 day') as d
+      where extract(isodow from d) < 6
+        and not exists (select 1 from ph_free f where f.day = d::date)), '{}'::date[])
+  end
+$fn$;
+
+-- Abwesenheit für einen Zeitraum eintragen (intern, nach der Rechteprüfung)
+create or replace function public.ph_plan_absent(p_name text, p_class text, p_from date, p_to date, p_blocks text[]) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+declare
+  v_name   text := btrim(coalesce(p_name, ''));
+  v_class  text := nullif(btrim(coalesce(p_class, '')), '');
+  v_blocks text[] := ph_clean_blocks(p_blocks);
+  v_days   date[] := ph_school_days(p_from, p_to);
+  v_series uuid := gen_random_uuid();
+begin
+  if v_name = '' then v_name := 'N.N.'; end if;
+  if char_length(v_name) > 60 or (v_class is not null and not ph_class_ok(v_class)) then
+    return ph_fail('ungueltig');
+  end if;
+  if v_days is null then return ph_fail('datum'); end if;
+  if cardinality(v_days) = 0 then return ph_fail('keine_schultage'); end if;
+  if cardinality(v_blocks) = cardinality(ph_blocks()) then v_blocks := '{}'; end if;
+  perform ph_cleanup();
+  insert into ph_absent (day, name, class_id, blocks, series)
+    select d, v_name, v_class, v_blocks, v_series from unnest(v_days) as d;
+  return jsonb_build_object('ok', true, 'series', v_series, 'days', cardinality(v_days));
+end
+$fn$;
+
+create or replace function public.ph_admin_plan_absent(
+  p_token text, p_name text, p_class text, p_from date, p_to date, p_blocks text[]
+) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  return ph_plan_absent(p_name, p_class, p_from, p_to, p_blocks);
+end
+$fn$;
+
+-- Klasse meldet im Voraus, nur für die eigene Klasse
+create or replace function public.ph_class_plan_absent(
+  p_code text, p_class text, p_name text, p_from date, p_to date, p_blocks text[]
+) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+declare
+  v_err text := ph_check_code(p_code);
+begin
+  if v_err is not null then return ph_fail(v_err); end if;
+  if not ph_class_ok(p_class) then return ph_fail('ungueltig'); end if;
+  return ph_plan_absent(p_name, p_class, p_from, p_to, p_blocks);
+end
+$fn$;
+
+-- Vertretung für einen Zeitraum (nur Schulleitung). Ohne Zeitraum-Auswahl ganzer Tag.
+create or replace function public.ph_admin_plan_cover(
+  p_token text, p_name text, p_to_class text, p_from date, p_to date, p_blocks text[]
+) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+declare
+  v_name   text := btrim(coalesce(p_name, ''));
+  v_blocks text[] := ph_clean_blocks(p_blocks);
+  v_days   date[];
+  v_series uuid := gen_random_uuid();
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  if char_length(v_name) not between 1 and 60 or not ph_class_ok(p_to_class) then
+    return ph_fail('ungueltig');
+  end if;
+  v_days := ph_school_days(p_from, p_to);
+  if v_days is null then return ph_fail('datum'); end if;
+  if cardinality(v_days) = 0 then return ph_fail('keine_schultage'); end if;
+  if cardinality(v_blocks) = 0 then v_blocks := ph_blocks(); end if;
+  perform ph_cleanup();
+  insert into ph_cover (day, name, to_class, blocks, series)
+    select d, v_name, p_to_class, v_blocks, v_series from unnest(v_days) as d;
+  return jsonb_build_object('ok', true, 'series', v_series, 'days', cardinality(v_days));
+end
+$fn$;
+
+-- Ganze Serie entfernen (ab heute). Schulleitung: Abwesenheit oder Vertretung.
+create or replace function public.ph_admin_remove_series(p_token text, p_series uuid) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+declare
+  v_a int; v_c int;
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  delete from ph_absent where series = p_series and day >= ph_today();
+  get diagnostics v_a = row_count;
+  delete from ph_cover  where series = p_series and day >= ph_today();
+  get diagnostics v_c = row_count;
+  if v_a + v_c = 0 then return ph_fail('nicht_gefunden'); end if;
+  return jsonb_build_object('ok', true);
+end
+$fn$;
+
+-- Klasse entfernt eine eigene Abwesenheits-Serie
+create or replace function public.ph_class_remove_series(p_code text, p_class text, p_series uuid) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+declare
+  v_err text := ph_check_code(p_code);
+begin
+  if v_err is not null then return ph_fail(v_err); end if;
+  if not ph_class_ok(p_class) then return ph_fail('ungueltig'); end if;
+  delete from ph_absent where series = p_series and class_id = p_class and day >= ph_today();
+  if not found then return ph_fail('nicht_gefunden'); end if;
+  return jsonb_build_object('ok', true);
+end
+$fn$;
+
+-- Unterrichtsfreie Tage setzen bzw. entfernen (Wochenenden werden nicht gespeichert)
+create or replace function public.ph_admin_set_free(p_token text, p_from date, p_to date, p_label text) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+declare
+  v_label text := left(btrim(coalesce(p_label, '')), 40);
+  v_n int;
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  if p_from is null or p_to is null or p_from > p_to
+     or p_from < ph_today() or p_to > ph_today() + 366 then
+    return ph_fail('datum');
+  end if;
+  insert into ph_free (day, label)
+    select d::date, v_label from generate_series(p_from, p_to, interval '1 day') as d
+    where extract(isodow from d) < 6
+  on conflict (day) do update set label = excluded.label;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'days', v_n);
+end
+$fn$;
+
+create or replace function public.ph_admin_remove_free(p_token text, p_from date, p_to date) returns jsonb
+language plpgsql volatile security definer set search_path = public as
+$fn$
+begin
+  if not ph_admin_ok(p_token) then return ph_fail('token'); end if;
+  delete from ph_free where day between p_from and p_to;
+  if not found then return ph_fail('nicht_gefunden'); end if;
+  return jsonb_build_object('ok', true);
+end
+$fn$;
+
+-- Planung abrufen: Abwesende, Vertretungen und freie Tage von p_from bis p_to (nur mit Schulcode)
+create or replace function public.ph_fetch_plan(p_code text, p_from date, p_to date) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as
+$fn$
+declare
+  v_err  text := ph_check_code(p_code);
+  v_from date := greatest(coalesce(p_from, ph_today()), ph_today());
+  v_to   date := least(coalesce(p_to, ph_today() + 183), ph_today() + 366);
+begin
+  if v_err is not null then return ph_fail(v_err); end if;
+  return jsonb_build_object(
+    'ok', true,
+    'today', ph_today(),
+    'from', v_from,
+    'to', v_to,
+    'absent', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', id, 'day', day, 'name', name, 'class_id', class_id,
+                'blocks', to_jsonb(blocks), 'series', series) order by day, id)
+              from ph_absent where day between v_from and v_to), '[]'::jsonb),
+    'cover', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', id, 'day', day, 'name', name, 'to_class', to_class,
+                'blocks', to_jsonb(blocks), 'series', series) order by day, id)
+              from ph_cover where day between v_from and v_to and active), '[]'::jsonb),
+    'free', coalesce((select jsonb_agg(jsonb_build_object('day', day, 'label', label) order by day)
+              from ph_free where day between v_from and v_to), '[]'::jsonb)
+  );
+end
+$fn$;
+
 -- 6) Lebenszeichen für die GitHub Action, damit das Gratis-Projekt nicht pausiert.
 -- Gibt keine Daten heraus, räumt nur Altes auf.
 create or replace function public.ph_ping() returns jsonb
@@ -747,6 +959,16 @@ revoke all on function public.ph_admin_add_absent(text, text, text, text[]) from
 revoke all on function public.ph_admin_remove_absent(text, bigint)        from public;
 revoke all on function public.ph_admin_add_cover(text, text, text, text[]) from public;
 revoke all on function public.ph_admin_remove_cover(text, bigint)         from public;
+revoke all on function public.ph_school_days(date, date)                   from public, anon, authenticated;
+revoke all on function public.ph_plan_absent(text, text, date, date, text[]) from public, anon, authenticated;
+revoke all on function public.ph_admin_plan_absent(text, text, text, date, date, text[]) from public;
+revoke all on function public.ph_class_plan_absent(text, text, text, date, date, text[]) from public;
+revoke all on function public.ph_admin_plan_cover(text, text, text, date, date, text[])  from public;
+revoke all on function public.ph_admin_remove_series(text, uuid)            from public;
+revoke all on function public.ph_class_remove_series(text, text, uuid)      from public;
+revoke all on function public.ph_admin_set_free(text, date, date, text)     from public;
+revoke all on function public.ph_admin_remove_free(text, date, date)        from public;
+revoke all on function public.ph_fetch_plan(text, date, date)               from public;
 
 grant execute on function public.ph_login_code(text)                         to anon, authenticated;
 grant execute on function public.ph_fetch_day(text)                          to anon, authenticated;
@@ -764,3 +986,11 @@ grant execute on function public.ph_admin_add_absent(text, text, text, text[]) t
 grant execute on function public.ph_admin_remove_absent(text, bigint)         to anon, authenticated;
 grant execute on function public.ph_admin_add_cover(text, text, text, text[]) to anon, authenticated;
 grant execute on function public.ph_admin_remove_cover(text, bigint)          to anon, authenticated;
+grant execute on function public.ph_admin_plan_absent(text, text, text, date, date, text[]) to anon, authenticated;
+grant execute on function public.ph_class_plan_absent(text, text, text, date, date, text[]) to anon, authenticated;
+grant execute on function public.ph_admin_plan_cover(text, text, text, date, date, text[])  to anon, authenticated;
+grant execute on function public.ph_admin_remove_series(text, uuid)            to anon, authenticated;
+grant execute on function public.ph_class_remove_series(text, text, uuid)      to anon, authenticated;
+grant execute on function public.ph_admin_set_free(text, date, date, text)     to anon, authenticated;
+grant execute on function public.ph_admin_remove_free(text, date, date)        to anon, authenticated;
+grant execute on function public.ph_fetch_plan(text, date, date)               to anon, authenticated;
